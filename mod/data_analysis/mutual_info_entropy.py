@@ -11,6 +11,7 @@ Created on 2020/1/15 下午3:13
 @Describe: 互信息熵测试
 """
 
+from lake.decorator import time_cost
 import numpy as np
 import copy
 import sys
@@ -115,6 +116,7 @@ class MutualInfoEntropy(object):
 		mutual_info_entropy = univar_entropy_x + univar_entropy_y - joint_entropy
 		return mutual_info_entropy
 	
+	@time_cost
 	def time_delayed_mutual_info_entropy(self, lags):
 		"""
 		带有时间延迟的互信息熵检测.

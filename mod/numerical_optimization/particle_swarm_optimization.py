@@ -11,11 +11,13 @@ Created on 2019/12/24 下午12:27
 @Describe: 粒子群优化算法
 """
 
+from lake.decorator import time_cost
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
 
+@time_cost
 class PSO(object):
 	"""
 	粒子群优化算法， 适用于高维、非线性过程的连续变量优化

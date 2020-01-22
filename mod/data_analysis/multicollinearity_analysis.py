@@ -13,6 +13,7 @@ Created on 2020/1/22 下午4:02
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+from lake.decorator import time_cost
 import pandas as pd
 import numpy as np
 import copy
@@ -31,6 +32,7 @@ def cal_vif(y_true, y_pred):
 		return vif
 
 
+@time_cost
 def multicollinearity_test(data, cols, vif_thres = 10.0, cut_off = None):
 	"""
 	当data表中的字段间可能存在强相关性时, 通过方差膨胀因子VIF进行特征筛选.

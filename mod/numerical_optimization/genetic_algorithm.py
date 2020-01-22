@@ -11,6 +11,7 @@ Created on 2019/12/24 下午12:27
 @Describe: 遗传算法
 """
 
+from lake.decorator import time_cost
 import numpy as np
 
 
@@ -20,6 +21,7 @@ def exp_adj_func(x, w = 10.0):
 	return x
 
 
+@time_cost
 class GeneticAlgorithm(object):
 	"""
 	遗传算法, 用于求解非线性数值优化问题.
