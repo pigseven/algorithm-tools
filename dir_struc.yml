@@ -1,0 +1,15 @@
+# 项目目录流程
+root:
+    config:
+    lib:
+    mod:
+        config:
+    data:
+        raw:
+        runtime:
+    file:
+    graph:
+    report:
+    
+    
+    
