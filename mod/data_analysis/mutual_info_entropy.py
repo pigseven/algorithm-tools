@@ -103,15 +103,15 @@ class MutualInfoEntropy(object):
 		————————————————————————————————————————————————————————————
 		"""
 		
-		# 获取边际熵
+		# 获取边际熵.
 		univar_entropy_x = self._univar_entropy(self.x_freq_ns)
 		univar_entropy_y = self._univar_entropy(self.y_freq_ns)
 		
-		# 获取联合分布熵
+		# 获取联合分布熵.
 		H = self.joint_binning(x, y)
 		joint_entropy = self._joint_2d_entropy(H)
 		
-		# 互信息熵
+		# 互信息熵.
 		mutual_info_entropy = univar_entropy_x + univar_entropy_y - joint_entropy
 		return mutual_info_entropy
 	
