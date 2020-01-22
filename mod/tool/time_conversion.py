@@ -27,7 +27,6 @@ def stamp2time(stp, time_format = '%Y-%m-%d %H:%M:%S'):
 	return t
 
 
-
 def time2utc(t):
 	"""
 	将北京时间转换为UTC时间
