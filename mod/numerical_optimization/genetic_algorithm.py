@@ -99,7 +99,7 @@ class GeneticAlgorithm(object):
 		:param obj_func: function, 目标函数
 		:param optim_direc: str from {'minimize', 'maximize'}, 优化方向
 		:param normalize: bool, 是否进行0-1归一化处理
-		:return:
+		:return: fitness, normalized_fitness(or fitness if not normalized)
 		"""
 		fitness = np.apply_along_axis(func, 1, self.pop)
 		
