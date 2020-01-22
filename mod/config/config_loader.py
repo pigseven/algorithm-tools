@@ -9,16 +9,15 @@ Created on 2019/11/22 上午9:24
 @Describe: 项目参数配置器
 """
 
-import os
-import yaml
-import sys
-import logging
 import logging.config
-import lake
-
+import logging
 import lake.decorator
 import lake.data
 import lake.dir
+import lake
+import yaml
+import sys
+import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../config/'))
 
@@ -43,12 +42,10 @@ class ConfigLoader(object):
 	
 	def _set_proj_dir(self):
 		"""项目根目录"""
-		
 		self._proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 	
 	def _set_proj_cmap(self):
 		"""设置项目颜色方案"""
-		
 		self._proj_cmap = {
 			'blue': '#1f77b4',  # 蓝色
 			'orange': '#ff7f0e',  # 黄橙色
@@ -73,10 +70,7 @@ class ConfigLoader(object):
 		return self._proj_cmap
 	
 	def set_logging(self):
-		"""
-		配制logging文件
-		"""
-		
+		"""配制logging文件"""
 		log_dir = self._absolute_path('../logs/')
 		lake.dir.mk(log_dir)
 		log_config = self.conf['logging']

@@ -29,7 +29,7 @@ def get_haver_distance(lat0, lng0, lat1, lng1):
 	:return: 两点间的球面距离，单位：米（m）
 	"""
 	
-	earth_radius = 6371  # 地球平均半径，6371km
+	earth_radius = 6371  # 地球平均半径, 6371km
 	
 	# 经纬度转换成弧度
 	lat0 = radians(lat0)
