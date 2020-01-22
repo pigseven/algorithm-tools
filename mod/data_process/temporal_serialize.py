@@ -19,7 +19,7 @@ import bisect
 
 def search_nearest_neighbors_in_list(lst, x):
 	"""
-	寻找x在有序lst中的两侧（或单侧）邻点值
+	寻找x在有序lst中的两侧（或单侧）邻点值.
 	:param x: float
 	:param lst: list
 	:return: neighbors, tuple (left_neighbor, right_neighbor)
