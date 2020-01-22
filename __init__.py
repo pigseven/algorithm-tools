@@ -16,7 +16,7 @@ import os
 
 proj_dir = os.path.abspath(os.path.dirname(__file__))
 
-with open('dir_struc.yml', 'r', encoding = 'utf-8') as f:
+with open('project_struc.yml', 'r', encoding = 'utf-8') as f:
 	fp_dict = yaml.load(f, Loader = yaml.Loader)
 	
 	
