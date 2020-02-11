@@ -290,54 +290,55 @@ class TwoDimJointBinning(object):
 				adict.update({k: []})
 		return adict
 	
-	def _marginal_binning(self, methods, params):
+	def marginal_binning(self, methods, params):
 		"""
 		针对x和y序列边际分布进行分箱
 		:param methods: dict, like {'x': 'method_x', 'y': 'method_y'}
 		:param params: dict, like {'x': {'param_0': param_0}, 'y': {'param_1': param_1, 'param_2': param_2}}
 		:return:
 		"""
-		# x方向分箱.
-		method = methods['x']
-		value_type = self.value_types['x']
-		self._check_method_value_type(method, value_type)
-		odsb_x = OneDimSeriesBinning(self.samples[:, 0], x_type = value_type)
-		_, labels_x = odsb_x.series_binning(method, params['x'])
-		allocs_x = odsb_x.allocate_samples(labels = labels_x)
-		# 对空箱进行填补.
-		allocs_x = self._fill_empty_keys(allocs_x, labels_x)
-
-		# y方向分箱.
-		method = methods['y']
-		value_type = self.value_types['y']
-		self._check_method_value_type(method, value_type)
-		odsb_y = OneDimSeriesBinning(self.samples[:, 1], x_type = value_type)
-		_, labels_y = odsb_y.series_binning(method, params['y'])
-		allocs_y = odsb_y.allocate_samples(labels = labels_y)
-		# 对空箱进行填补.
-		allocs_y = self._fill_empty_keys(allocs_y, labels_y)
+		# x和y方向分箱.
+		vars = ['x', 'y']
+		allocations = collections.defaultdict(dict)
+		labels = collections.defaultdict(list)
+		freq_ns = collections.defaultdict(list)
+		for var in vars:
+			method = methods[var]
+			value_type = self.value_types[var]
+			self._check_method_value_type(method, value_type)
+			odsb = OneDimSeriesBinning(self.samples[:, vars.index(var)], x_type = value_type)
+			freqs, labs = odsb.series_binning(method, params[var])
+			allocs = odsb.allocate_samples(labels = labs)
+			
+			# 对空箱进行填补.
+			allocations[var] = self._fill_empty_keys(allocs, labs)
+			labels[var] = labs
+			freq_ns[var] = freqs
 		
-		return allocs_x, allocs_y, labels_x, labels_y
+		return allocations, labels, freq_ns
 		
-	def joint_binning(self, methods, params, to_array = False):
+	def joint_binning(self, allocations, labels, to_array = False):
 		"""
 		对每列序列进行分箱
-		:param methods: dict, each value must be in {'isometric', 'quasi_chi2', 'label'}
-		:param x_params: dict, 分箱method函数参数设置
-		:param y_params: dict, 同x_params
+		# :param methods: dict, each value must be in {'isometric', 'quasi_chi2', 'label'}
+		# :param x_params: dict, 分箱method函数参数设置
+		# :param y_params: dict, 同x_params
 		
 		Example:
 		------------------------------------------------------------
 		from mod.data_binning import gen_two_dim_samples
+
 		samples = gen_two_dim_samples(samples_len = 2000, value_types = ['continuous', 'continuous'])
 		tdjb = TwoDimJointBinning(samples, value_types = {'x': 'continuous', 'y': 'continuous'})
-	
+		
 		methods = {'x': 'isometric', 'y': 'quasi_chi2'}
 		params = {'x': {'bins': 100}, 'y': {'init_bins': 100, 'final_bins': 30}}
-		joint_binning_results = tdjb.joint_binning(methods, params, to_array = True)
+		allocations, labels, freq_ns = tdjb.marginal_binning(methods, params)
+		joint_binning_results = tdjb.joint_binning(allocations, labels, to_array = True)
 		------------------------------------------------------------
 		"""
-		allocs_x, allocs_y, labels_x, labels_y = self._marginal_binning(methods, params)
+		allocs_x, allocs_y = allocations['x'], allocations['y']
+		labels_x, labels_y = labels['x'], labels['y']
 
 		# 联合分箱.
 		joint_binning_results = {}
@@ -345,8 +346,8 @@ class TwoDimJointBinning(object):
 			if allocs_x[label_x] == []:
 				allocs_y = {}
 			else:
-				indxs = allocs_x[label_x]
-				odsb_y = OneDimSeriesBinning(self.samples[indxs, 1], x_type = self.value_types['y'])
+				idxs = allocs_x[label_x]
+				odsb_y = OneDimSeriesBinning(self.samples[idxs, 1], x_type = self.value_types['y'])
 				allocs_y = odsb_y.allocate_samples(labels = labels_y)
 			# 对空箱进行填补.
 			allocs_y = self._fill_empty_keys(allocs_y, labels_y)
@@ -355,12 +356,9 @@ class TwoDimJointBinning(object):
 			for label_y in allocs_y.keys():
 				allocs_y[label_y] = len(allocs_y[label_y])
 			joint_binning_results[label_x] = sort_dict_by_keys(allocs_y)
-
 		joint_binning_results = sort_dict_by_keys(joint_binning_results)
 
 		if to_array:
 			joint_binning_results = np.array([list(joint_binning_results[k].values()) for k in joint_binning_results.keys()])
 
 		return joint_binning_results
-
-
