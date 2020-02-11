@@ -105,7 +105,7 @@ class MutualInfoEntropy(object):
 		univar_entropy_x = self._univar_entropy(h_x)
 		univar_entropy_y = self._univar_entropy(h_y)
 		
-		# # 获取联合分布熵
+		# 获取联合分布熵
 		joint_entropy = self._joint_2d_entropy(H)
 		
 		# 互信息熵
