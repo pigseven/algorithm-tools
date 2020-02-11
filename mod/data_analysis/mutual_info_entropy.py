@@ -22,7 +22,7 @@ eps = 1e-6
 
 
 class MutualInfoEntropy(object):
-	"""二元序列变量间的互信息熵相关性检测"""
+	"""二元变量序列间的互信息熵相关性检测"""
 	
 	def __init__(self, x, y, value_types):
 		"""
