@@ -31,9 +31,7 @@ class MutualInfoEntropy(object):
 		:param y: array like, 一维数组
 		:param value_types: dict, like {'x': 'discrete', 'y': 'continuous'}
 		"""
-		try:
-			assert len(x) == len(y)
-		except Exception:
+		if len(x) != len(y):
 			raise ValueError('Series x and y are not in the same length.')
 		
 		for value_type in value_types.values():
