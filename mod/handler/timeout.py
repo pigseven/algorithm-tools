@@ -55,9 +55,9 @@ if __name__ == "__main__":
 	from lake.decorator import time_cost
 
 	@time_cost
-	@timeout(10)
+	@timeout(1)
 	def test_func(k = 0):
-		time.sleep(2)
+		time.sleep(5)
 		k += 1
 		return k
 	
@@ -66,7 +66,8 @@ if __name__ == "__main__":
 		k = test_func()
 	except Exception as e:
 		print('Time out')
-		raise TimeoutError('ERROR: time out, {}'.format(e))
+	
+	print(k)
 	
 
 
