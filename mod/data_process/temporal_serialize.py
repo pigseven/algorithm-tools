@@ -16,38 +16,17 @@ import pandas as pd
 import numpy as np
 import bisect
 
+from lake.decorator import time_cost
+import pandas as pd
+import numpy as np
+import sys
 
-def search_nearest_neighbors_in_list(lst, x):
-	"""
-	寻找x在有序lst中的两侧（或单侧）邻点值.
-	:param x: float
-	:param lst: list
-	:return: neighbors, tuple (left_neighbor, right_neighbor)
-	"""
-	
-	lst_sorted = lst
-	lst_sorted.sort(reverse = False)  # 升序排列
-	
-	try:
-		assert lst_sorted == lst
-	except:
-		raise ValueError('list不是升序排列')
-	
-	if x in lst:
-		return [x]
-	else:
-		if x <= lst_sorted[0]:
-			neighbors = [lst_sorted[0]]
-		elif x >= lst_sorted[-1]:
-			neighbors = [lst_sorted[-1]]
-		else:
-			left_idx = bisect.bisect_left(lst_sorted, x) - 1
-			right_idx = left_idx + 1
-			neighbors = [lst_sorted[left_idx], lst_sorted[right_idx]]
-		return neighbors
+sys.path.append('../..')
+
+from mod.data_process import search_nearest_neighbors_in_list
 
 
-@time_cost
+# @time_cost
 class DataTemporalSerialization(object):
 	"""
 	数据时间戳连续化处理, 使用已有记录对未知记录未知进行线性插值填充.
@@ -57,28 +36,28 @@ class DataTemporalSerialization(object):
 		"""
 		初始化
 		:param data: pd.DataFrame, cols = {'time', vars, ...}, 数据总表
-		
+
 		Note:
 			1. 待处理的数据表必需含有以"time"字段标记的时间戳;
 			2. 数据表中其他字段值必需为int或float类型;
-			
+
 		Example:
 		------------------------------------------------------------
 		# %% 载入数据
 		import matplotlib.pyplot as plt
 		import sys
 		import os
-		
+
 		sys.path.append('../..')
-		
+
 		from lib import proj_dir
-		
+
 		data = pd.read_csv(os.path.join(proj_dir, 'data/provided/weather/raw_records.csv'))
-		
+
 		# 查看数据时间戳连续情况
 		# 可以发现原始数据时间戳不连续
 		plt.plot(list(data['time']))
-		
+
 		# %% 时间戳连续化处理
 		hr = 3600
 		dts = DataTemporalSerialization(data, data['time'].min(), data['time'].max(), hr)
@@ -89,13 +68,13 @@ class DataTemporalSerialization(object):
 		try:
 			assert 'time' in data.columns
 		except Exception:
-			raise ValueError('数据表中没有字段"time".')
+			raise ValueError('Data does not have the field "time".')
 		
 		for col in data.columns:
 			dtype = str(data[col].dtypes)
 			
 			if ('int' not in dtype) & ('float' not in dtype):
-				raise ValueError('数据表中字段{}值类型为{}, 不为"int"或"float", 无法进行之后的计算.'.format(col, dtype))
+				raise ValueError('Value type for the field "{}" is "{}", not "int" or "float", cannot continue.'.format(col, dtype))
 		
 		self.expected_stps_list = np.arange(start_stp, end_stp + stp_step, stp_step)
 		self.exist_stps_list = data['time'].tolist()
@@ -108,11 +87,11 @@ class DataTemporalSerialization(object):
 		:param device_data: pd.DataFrame, 某id设备数据记录表
 		:param stp_list: 连续时间戳list
 		:return: device_data: pd.DataFrame, 时间戳连续化后的设备数据记录表
-		
+
 		Example:
 		------------------------------------------------------------
 		data_srlzd = dts.temporal_serialize()
-		
+
 		# 可以发现处理后数据时间戳连续
 		plt.plot(list(data_srlzd['time']))
 		------------------------------------------------------------

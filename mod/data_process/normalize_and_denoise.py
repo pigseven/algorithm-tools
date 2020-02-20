@@ -27,7 +27,7 @@ def normalize_cols(data, cols_bounds):
 		2. 如果实际数据中该字段值超出界限则需要调整cols_bounds中的上下界设置;
 		
 	Example:
-	————————————————————————————————————————————————————————————
+	------------------------------------------------------------
 	import pandas as pd
 	import sys
 	import os
@@ -57,9 +57,8 @@ def normalize_cols(data, cols_bounds):
 		'clock_num': [0, 24]}
 	
 	data_nmlzd = normalize_cols(data, cols_bounds)
-	————————————————————————————————————————————————————————————
+	------------------------------------------------------------
 	"""
-	
 	data = data.copy()
 	for col in cols_bounds.keys():
 		if col in data.columns:
@@ -119,14 +118,14 @@ def denoise_cols(data, cols2denoise, window_size, order):
 	:return: data: pd.DataFrame, 经过去噪处理后的数据表
 	
 	Example:
-	————————————————————————————————————————————————————————————
+	------------------------------------------------------------
 	# %% 去噪
 	cols2denoise = ['pm25', 'pm10', 'so2', 'no2', 'o3', 'co', 'aqi', 'ws', 'temp', 'sd']
 	window_size = 3
 	order = 1
 	
 	data_denoised = denoise_cols(data_nmlzd, cols2denoise, window_size, order)
-	————————————————————————————————————————————————————————————
+	------------------------------------------------------------
 	"""
 	
 	if window_size < 2 * order + 1:
