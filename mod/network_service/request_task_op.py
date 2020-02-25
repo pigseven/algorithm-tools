@@ -141,11 +141,13 @@ class RequestOperation(object):
 			return_task_id: bool, 用于self.req_op = 'pull_task_info'时, if True, 返回task_id, 否则返回resp_data
 		"""
 		if self.req_op == 'pull_task_info':
-			try:
-				if kwargs['return_task_id']:
-					return resp_data['taskID']
-			except:
-				return resp_data
+				if 'return_task_id' in kwargs.keys():
+					if kwargs['return_task_id']:
+						return resp_data['taskID']
+					else:
+						return resp_data
+				else:
+					return resp_data
 		elif self.req_op == 'pull_task_data':
 			return resp_data
 		else:
