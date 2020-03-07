@@ -14,16 +14,16 @@ Created on 2020/2/19 11:26
 import pandas as pd
 import numpy as np
 import sys
-import os
 
 sys.path.append('../..')
 
 from mod.data_process import search_nearest_neighbors_in_list
 
 
-def data_implement(data, fields2process):
+def data_implement(data: pd.DataFrame, fields2process: list):
 	"""
 	数据填补
+	:param data: pd.DataFrame, 待填补数据表
 	:param fields2process: list of strs, 需要进行缺失填补的字段
 	
 	Example:

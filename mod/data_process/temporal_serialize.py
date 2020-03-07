@@ -11,12 +11,10 @@ Created on 2019/12/12 上午10:39
 @Describe: 将数据在时间上进行连续化处理
 """
 
-from lake.decorator import time_cost
-import pandas as pd
-import numpy as np
-import bisect
+import logging
 
-from lake.decorator import time_cost
+logging.basicConfig(level = logging.INFO)
+
 import pandas as pd
 import numpy as np
 import sys
@@ -32,10 +30,11 @@ class DataTemporalSerialization(object):
 	数据时间戳连续化处理, 使用已有记录对未知记录未知进行线性插值填充.
 	"""
 	
-	def __init__(self, data, start_stp, end_stp, stp_step):
+	def __init__(self, data: pd.DataFrame, start_stp: int, end_stp: int, stp_step: int, cols2serialze: list = None):
 		"""
 		初始化
 		:param data: pd.DataFrame, cols = {'time', vars, ...}, 数据总表
+		:param cols2serialze: list of strs, 需要按照'time'字段进行序列化处理的字段.
 
 		Note:
 			1. 待处理的数据表必需含有以"time"字段标记的时间戳;
@@ -74,19 +73,20 @@ class DataTemporalSerialization(object):
 			dtype = str(data[col].dtypes)
 			
 			if ('int' not in dtype) & ('float' not in dtype):
-				raise ValueError('Value type for the field "{}" is "{}", not "int" or "float", cannot continue.'.format(col, dtype))
+				raise ValueError('Value type of the column "{}" is "{}", not "int" or "float", cannot continue.'.format(col, dtype))
 		
-		self.expected_stps_list = np.arange(start_stp, end_stp + stp_step, stp_step)
+		self.expected_stps_list = list(np.arange(start_stp, end_stp + stp_step, stp_step))
 		self.exist_stps_list = data['time'].tolist()
 		self.stp_step = stp_step
-		self.data = data.copy()
+		self.data = data.copy().drop_duplicates(['time']).sort_values(by = 'time', ascending = True)  # 待处理数据按照time去重并升序排列
+		
+		if cols2serialze is not None:
+			self.data = self.data[['time'] + cols2serialze]
 	
-	def temporal_serialize(self):
+	def temporal_serialize(self) -> (pd.DataFrame, int):
 		"""
 		时间戳连续化.
-		:param device_data: pd.DataFrame, 某id设备数据记录表
-		:param stp_list: 连续时间戳list
-		:return: device_data: pd.DataFrame, 时间戳连续化后的设备数据记录表
+		:param cols2serialze: list of strs, 需要根据'time'字段进行序列化的其他字段
 
 		Example:
 		------------------------------------------------------------
@@ -96,35 +96,42 @@ class DataTemporalSerialization(object):
 		plt.plot(list(data_srlzd['time']))
 		------------------------------------------------------------
 		"""
+		exist_data = self.data.copy()  # 备份原数据, 之后的数据处理以此为准.
 		
+		miss_n = 0
 		for stp in self.expected_stps_list:
 			if stp not in self.exist_stps_list:
-				# 从已有数据中提取时间戳两侧最接近的数据
-				neighbor_stps = search_nearest_neighbors_in_list(self.exist_stps_list, stp)
-				neighbors = self.data[self.data.time.isin(neighbor_stps)]  # 获取前后相邻时间戳的数据
+				miss_n += 1
 				
-				# 根据时间戳距离计算权重并进行线性加权
+				# 从已有数据exist_data中提取时间戳两侧最接近的数据.
+				neighbor_stps = search_nearest_neighbors_in_list(self.exist_stps_list, stp)
+				neighbors = exist_data[exist_data.time.isin(neighbor_stps)]  # 获取前后相邻时间戳的数据
+				
+				# 根据时间戳距离计算权重并进行线性加权.
 				if len(neighbor_stps) == 1:
-					insert_row = neighbors
+					insert_row = neighbors.copy()
 				elif len(neighbor_stps) == 2:
 					weights = [neighbor_stps[1] - stp, stp - neighbor_stps[0]]
 					insert_row = (weights[0] * neighbors.iloc[0, :] + weights[1] * neighbors.iloc[1, :]) / (np.sum(weights))
-					insert_row = pd.DataFrame(insert_row).T
+					insert_row = pd.DataFrame(insert_row).T.copy()
 				else:
 					raise RuntimeError('the length of neighbors is not 1 or 2')
 				
-				insert_row.loc[0, 'time'] = stp
+				insert_row.reset_index(drop = True, inplace = True)
+				insert_row.loc[0, ('time',)] = stp
 				self.data = self.data.append(insert_row, ignore_index = True)
 		
-		# 只选取设定时间戳的数据
+		# 时间戳筛选.
+		# 由于原始数据中可能包含不在期望时间戳内的其他时间戳, 需要进行筛选和剔除.
 		self.data = self.data[self.data.time.isin(self.expected_stps_list)]
+		
+		# 时间戳去重.
+		self.data = self.data.drop_duplicates(['time'])
 		
 		# 按照时间戳由小到大顺序排序.
 		self.data = self.data.sort_values(by = ['time'], ascending = True)
 		
-		# 重设index
+		# 重设index.
 		self.data.reset_index(drop = True, inplace = True)
 		
-		return self.data
-	
-	
+		return self.data, miss_n
