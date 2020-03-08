@@ -153,7 +153,11 @@ class MutualInfoEntropy(object):
 				insert_locs_[:, d] = np.searchsorted(edges_[d], data_[:, d], side = 'left')
 			
 			# 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-			edges_len_ = tuple(np.max(insert_locs_, axis = 0))
+			edges_len_ = list(np.max(insert_locs_, axis = 0))
+			for d in range(self.D):
+				if self.value_types[d] == 'discrete':
+					edges_len_[d] += 1
+			
 			ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_, mode = 'wrap')
 			hist_ = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
 			
