@@ -22,7 +22,7 @@ def gen_series_samples(sample_len, value_type):
 		import random
 		labels = [0, 0.5, 1]
 		x = []
-		for i in range(2000):
+		for i in range(sample_len):
 			x += random.sample(labels, k = 1)
 		x = np.array(x)
 		return x

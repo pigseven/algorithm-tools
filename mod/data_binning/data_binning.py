@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on 2020/2/11 14:34
+Created on 2020/3/8 10:44
 
-@Project -> File: algorithm-tools -> one_dim_binning.py
+@Project -> File: algorithm-tools -> data_binning_new.py
 
 @Author: luolei
 
@@ -11,32 +11,37 @@ Created on 2020/2/11 14:34
 @Describe: 数据分箱
 """
 
+import logging
+
+logging.basicConfig(level = logging.INFO)
+
+from lake.decorator import time_cost
+import pandas as pd
 import numpy as np
-import collections
 import warnings
 import sys
 
 sys.path.append('../..')
 
-from mod.tool.operation import sort_dict_by_keys
+from mod.data_binning import gen_series_samples
 
 
-class OneDimSeriesBinning(object):
+class SeriesBinning(object):
 	"""一维序列分箱"""
 	
-	def __init__(self, x, x_type):
+	def __init__(self, x: list or np.array, x_type: str):
 		"""
 		初始化
 		:param x: list or array like, 待分箱序列
 		:param x_type: str in ['continuous', 'discrete']
 		"""
 		if x_type not in ['continuous', 'discrete']:
-			raise ValueError('The param x_type {} not in ["continuous", "discrete"].'.format(x_type))
+			raise ValueError('Param x_type {} not in ["continuous", "discrete"].'.format(x_type))
 		
 		self.x = np.array(x).flatten()  # flatten处理
 		self.x_type = x_type
 	
-	def _get_stat_params(self):
+	def _get_stat_params(self) -> dict:
 		"""计算1维数据x的统计学参数"""
 		# 计算均值方差.
 		mean = np.mean(self.x)
@@ -63,18 +68,27 @@ class OneDimSeriesBinning(object):
 	def stat_params(self):
 		return self._get_stat_params()
 	
-	def _isometric_binning(self, bins):
+	@time_cost
+	def isometric_binning(self, bins) -> (list, list):
 		"""
 		等距分箱，适用于对类似高斯型数据进行分箱
 		:param bins: int > 0, 分箱个数
 		:return:
 			freq_ns: list of ints, 箱子中的频数
-			densities: list of floats, 密度
 			labels: list of strs or ints, 各箱的标签
+		
+		Example:
+		------------------------------------------------------------
+		x_1 = gen_series_samples(sample_len = 200000, value_type = 'discrete')
+		self = OneDimSeriesBinning(x_1, x_type = 'discrete')
+		freq_ns, labels = self.isometric_binning(bins = 50)
+		------------------------------------------------------------
 		"""
-		if self.x_type == 'discrete':
+		try:
+			assert self.x_type != 'discrete'
+		except:
 			warnings.warn('Invalid x_type: "discrete", self.isometric_binning is better for x_type = "continuous", '
-						  'please switch to self.label_binning.')
+						  'please switch to self.label_binning')
 		
 		# 计算数据整体的上下四分位点以及iqr距离.
 		# 按照上下四分位点外扩1.5倍iqr距离获得分箱外围边界以及每个箱子长度
@@ -95,27 +109,36 @@ class OneDimSeriesBinning(object):
 		
 		return freq_ns, labels
 	
-	def _quasi_chi2_binning(self, init_bins, final_bins, merge_freq_thres = None):
+	@time_cost
+	def quasi_chi2_binning(self, init_bins: int, final_bins: int, merge_freq_thres: float = None) -> (list, list):
 		"""
-		拟卡方分箱(无监督), 适用于对存在多个分布峰的非高斯类型连续变量数据进行分箱
-		:param init_bins: int > 0, 初始分箱个数
-		:param final_bins: int > 0, 最终分箱个数
-		:param merge_freq_thres: float > 0.0, 用于判断是否合并的箱频率密度阈值, 一般设为(样本量 / init_bins / 10)
+		拟卡方分箱
+		:param init_bins: int, 初始分箱数
+		:param final_bins: int, 最终分箱数下限
+		:param merge_freq_thres: float, 合并分箱的密度判据阈值
 		:return:
 			freq_ns: list of ints, 箱子中的频数
-			labels: list of strs, 各箱的标签
-		"""
-		if self.x_type == 'discrete':
-			warnings.warn('Invalid x_type: "discrete", self.quasi_chi2_binning is better for x_type = "continuous", '
-						  'please switch to self.label_binning.')
+			labels: list of strs or ints, 各箱的标签
 		
-		# 设置默认合并频率阈值.
+		Example:
+		------------------------------------------------------------
+		init_bins = 100
+		final_bins = 50
+		freq_ns, labels = self.quasi_chi2_binning(init_bins, final_bins)
+		------------------------------------------------------------
+		"""
+		try:
+			assert self.x_type != 'discrete'
+		except:
+			warnings.warn('Invalid x_type: "discrete", self.quasi_chi2_binning is better for x_type = "continuous", '
+						  'please switch to self.label_binning')
+		
 		if merge_freq_thres is None:
 			merge_freq_thres = len(self.x) / init_bins / 10
-		
-		# 首先进行粗分箱.
-		init_freq_ns, init_labels = self._isometric_binning(init_bins)
-		init_densities = init_freq_ns  # 这里使用箱频率密度表示概率分布意义上的密度
+			
+		# 第一次分箱.
+		init_freq_ns, init_labels = self.isometric_binning(init_bins)
+		densities = init_freq_ns  # 这里使用箱频率密度表示概率分布意义上的密度
 		init_box_lens = [1] * init_bins
 		
 		# 根据相邻箱密度差异判断是否合并箱.
@@ -123,15 +146,16 @@ class OneDimSeriesBinning(object):
 		freq_ns = init_freq_ns
 		labels = init_labels
 		box_lens = init_box_lens
-		densities = init_densities
+		
 		while True:
 			do_merge = 0
+			
 			# 在一次循环中优先合并具有最高相似度的箱.
 			similarities = {}
 			for i in range(bins - 1):
 				j = i + 1
 				density_i, density_j = densities[i], densities[j]
-				s = abs(density_i - density_j)  # 密度相似度
+				s = abs(density_i - density_j)  # 密度相似度，
 				
 				if s <= merge_freq_thres:
 					similarities[i] = s
@@ -161,204 +185,60 @@ class OneDimSeriesBinning(object):
 		
 		return freq_ns, labels
 	
-	def _label_binning(self):
+	@time_cost
+	def label_binning(self) -> (list, list):
 		"""
-		根据离散数据标签进行分箱
-		"""
-		if self.x_type == 'continuous':
-			warnings.warn('Invalid x_type: "continuous", self.label_binning is better for x_type = "discrete", '
-						  'please switch to self.label_binning or self.quasi_chi2_binning.')
+		根据离散标签进行分箱
+		:return:
+			freq_ns: list of ints, 箱子中的频数
+			labels: list of strs or ints, 各箱的标签
 		
-		labels = sorted(list(set(list(self.x))))  # **按照值从小到大排序
-		freq_ns = list(np.zeros(len(labels)))
-		for i in range(len(self.x)):
-			label = self.x[i]
-			freq_ns[labels.index(label)] += 1
+		Example:
+		------------------------------------------------------------
+		freq_ns, labels = self.label_binning()
+		------------------------------------------------------------
+		"""
+		try:
+			assert self.x_type != 'continuous'
+		except:
+			warnings.warn('Invalid x_type: "continuous", self.label_binning is better for x_type = "discrete", '
+						  'please switch to self.label_binning or self.quasi_chi2_binning')
+		
+		# 设定label.
+		labels = sorted(list(set(self.x)))  # **按照值从小到大排序
+		
+		# 统计freq_ns.
+		d_ = pd.DataFrame(self.x, columns = ['label'])
+		d_['index'] = d_.index
+		freq_counts_ = d_.groupby('label').count()
+		freq_counts_ = freq_counts_.to_dict()['index']
+
+		freq_ns = []
+		for i in range(len(labels)):
+			freq_ns.append(freq_counts_[labels[i]])
+		
 		return freq_ns, labels
 	
-	def series_binning(self, method, params = None):
+	@time_cost
+	def series_binning(self, method: str, params: dict = None):
 		"""
 		序列分箱
-		:param method:
-		:param params:
-		
-		Example:
-		------------------------------------------------------------
-		from mod.data_binning import gen_series_samples
-	
-		# 离散值分箱测试.
-		x_0 = gen_series_samples(sample_len = 2000, value_type = 'discrete')
-		odsb_0 = OneDimSeriesBinning(x_0, x_type = 'discrete')
-		freq_ns_0, labels_0 = odsb_0.series_binning(method = 'label')
-		allocate_records_0 = odsb_0.allocate_samples(labels_0)
-	
-		# 连续值分箱测试.
-		x_1 = gen_series_samples(sample_len = 2000, value_type = 'continuous')
-		odsb_1 = OneDimSeriesBinning(x_1, x_type = 'continuous')
-		freq_ns_1, labels_1 = odsb_1.series_binning(
-			method = 'quasi_chi2', params = {'init_bins': 100, 'final_bins': 20}
-		)
-		allocate_records_1 = odsb_1.allocate_samples(labels = labels_1)
-		------------------------------------------------------------
+		:return:
+			freq_ns: list of ints, 箱子中的频数
+			labels: list of strs or ints, 各箱的标签
 		"""
 		if method == 'isometric':
-			freq_ns, labels = self._isometric_binning(params['bins'])
+			freq_ns, labels = self.isometric_binning(params['bins'])
 		elif method == 'quasi_chi2':
-			freq_ns, labels = self._quasi_chi2_binning(params['init_bins'], params['final_bins'])
+			freq_ns, labels = self.quasi_chi2_binning(params['init_bins'], params['final_bins'])
 		elif method == 'label':
-			freq_ns, labels = self._label_binning()
+			freq_ns, labels = self.label_binning()
 		else:
-			raise ValueError('Invalid method {}.'.format(method))
+			raise ValueError('Invalid method {}'.format(method))
 		return freq_ns, labels
-	
-	def allocate_samples(self, labels = None):
-		"""
-		获取样本中每个元素对应的分箱label
-		"""
-		allocate_records = collections.defaultdict(list)  # 记录每个lable下面的样本index
-		if self.x_type == 'discrete':  # 离散值分箱结果收集
-			for i in range(len(self.x)):
-				label = self.x[i]
-				allocate_records[label].append(i)
-		elif self.x_type == 'continuous':  # 连续值分箱结果收集
-			# 连续类型值必须有lables.
-			if labels is None:
-				raise ValueError('Labels must be provided while self.x_type == "continuous".')
-			
-			for i in range(len(self.x)):
-				value = self.x[i]
-				
-				# 确定连续值分箱的label.
-				is_label_found = 0
-				for j in range(len(labels) - 1):
-					label_left = labels[j]
-					label_right = labels[j + 1]
-					if (label_left >= value) & (j == 0):
-						allocate_records[label_left].append(i)
-						is_label_found = 1
-						break
-					elif label_left < value <= label_right:
-						allocate_records[label_right].append(i)
-						is_label_found = 1
-						break
-					elif (label_right < value) & (j == len(labels) - 2):
-						allocate_records[label_right].append(i)
-						is_label_found = 1
-						break
-				if is_label_found == 0:
-					raise RuntimeError('Label not found for i = {}, value = {}.'.format(i, value))
 		
-		allocate_records = sort_dict_by_keys(allocate_records)
-		
-		return allocate_records
 
-
-class TwoDimJointBinning(object):
-	"""二维数据联合分箱"""
-	
-	def __init__(self, samples, value_types):
-		"""
-		初始化
-		:param samples: array like, shape = (-1, 2), 待分箱序列
-		:param value_types: dict, like {'x': 'continuous', 'y': 'discrete'}
-		"""
-		for x_type in value_types.values():
-			if x_type not in ['continuous', 'discrete']:
-				raise ValueError('x_type {} not in ["continuous", "discrete"].'.format(x_type))
-		
-		if samples.shape[1] != 2:
-			raise ValueError('Samples must be 2d array like.')
-		
-		self.samples = samples
-		self.value_types = value_types
-	
-	@staticmethod
-	def _check_method_value_type(method, value_type):
-		"""检查分箱方法与值类型是否匹配"""
-		if value_type == 'discrete':
-			if method not in ['label']:
-				raise ValueError('Binning method {} is not in ["label"] while value_type is {}.'.format(method, value_type))
-		elif value_type == 'continuous':
-			if method not in ['isometric', 'quasi_chi2']:
-				raise ValueError(
-					'Binning method {} is not in ["isometric", "quasi_chi2"] while value_type is {}.'.format(method, value_type))
-	
-	@staticmethod
-	def _fill_empty_keys(adict, keys4fill):
-		for k in keys4fill:
-			if k not in adict.keys():
-				adict.update({k: []})
-		return adict
-	
-	def marginal_binning(self, methods, params):
-		"""
-		针对x和y序列边际分布进行分箱
-		:param methods: dict, like {'x': 'method_x', 'y': 'method_y'}
-		:param params: dict, like {'x': {'param_0': param_0}, 'y': {'param_1': param_1, 'param_2': param_2}}
-		:return:
-		"""
-		# x和y方向分箱.
-		vars = ['x', 'y']
-		allocations = collections.defaultdict(dict)
-		labels = collections.defaultdict(list)
-		freq_ns = collections.defaultdict(list)
-		for var in vars:
-			method = methods[var]
-			value_type = self.value_types[var]
-			self._check_method_value_type(method, value_type)
-			odsb = OneDimSeriesBinning(self.samples[:, vars.index(var)], x_type = value_type)
-			freqs, labs = odsb.series_binning(method, params[var])
-			allocs = odsb.allocate_samples(labels = labs)
-			
-			# 对空箱进行填补.
-			allocations[var] = self._fill_empty_keys(allocs, labs)
-			labels[var] = labs
-			freq_ns[var] = freqs
-		
-		return allocations, labels, freq_ns
-		
-	def joint_binning(self, allocations, labels, to_array = False):
-		"""
-		对每列序列进行分箱
-		# :param methods: dict, each value must be in {'isometric', 'quasi_chi2', 'label'}
-		# :param x_params: dict, 分箱method函数参数设置
-		# :param y_params: dict, 同x_params
-		
-		Example:
-		------------------------------------------------------------
-		from mod.data_binning import gen_two_dim_samples
-
-		samples = gen_two_dim_samples(samples_len = 2000, value_types = ['continuous', 'continuous'])
-		tdjb = TwoDimJointBinning(samples, value_types = {'x': 'continuous', 'y': 'continuous'})
-		
-		methods = {'x': 'isometric', 'y': 'quasi_chi2'}
-		params = {'x': {'bins': 100}, 'y': {'init_bins': 100, 'final_bins': 30}}
-		allocations, labels, freq_ns = tdjb.marginal_binning(methods, params)
-		joint_binning_results = tdjb.joint_binning(allocations, labels, to_array = True)
-		------------------------------------------------------------
-		"""
-		allocs_x, allocs_y = allocations['x'], allocations['y']
-		labels_x, labels_y = labels['x'], labels['y']
-
-		# 联合分箱.
-		joint_binning_results = {}
-		for label_x in allocs_x.keys():
-			if allocs_x[label_x] == []:
-				allocs_y = {}
-			else:
-				idxs = allocs_x[label_x]
-				odsb_y = OneDimSeriesBinning(self.samples[idxs, 1], x_type = self.value_types['y'])
-				allocs_y = odsb_y.allocate_samples(labels = labels_y)
-			# 对空箱进行填补.
-			allocs_y = self._fill_empty_keys(allocs_y, labels_y)
-
-			# 计算箱子对应频数.
-			for label_y in allocs_y.keys():
-				allocs_y[label_y] = len(allocs_y[label_y])
-			joint_binning_results[label_x] = sort_dict_by_keys(allocs_y)
-		joint_binning_results = sort_dict_by_keys(joint_binning_results)
-
-		if to_array:
-			joint_binning_results = np.array([list(joint_binning_results[k].values()) for k in joint_binning_results.keys()])
-
-		return joint_binning_results
+if __name__ == '__main__':
+	x_1 = gen_series_samples(sample_len = 200000, value_type = 'continuous')
+	self = SeriesBinning(x_1, x_type = 'continuous')
+	freq_ns, labels = self.series_binning(method = 'isometric', params = {'bins': 150})
