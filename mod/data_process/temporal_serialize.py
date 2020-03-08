@@ -34,6 +34,9 @@ class DataTemporalSerialization(object):
 		"""
 		初始化
 		:param data: pd.DataFrame, cols = {'time', vars, ...}, 数据总表
+		:param start_stp: int, 起始时间戳
+		:param end_stp: int, 终止时间戳
+		:param stp_step: int, 时间步
 		:param cols2serialze: list of strs, 需要按照'time'字段进行序列化处理的字段.
 
 		Note:
@@ -86,7 +89,6 @@ class DataTemporalSerialization(object):
 	def temporal_serialize(self) -> (pd.DataFrame, int):
 		"""
 		时间戳连续化.
-		:param cols2serialze: list of strs, 需要根据'time'字段进行序列化的其他字段
 
 		Example:
 		------------------------------------------------------------
