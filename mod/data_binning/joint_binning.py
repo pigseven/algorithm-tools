@@ -22,14 +22,15 @@ import sys
 
 sys.path.append('../..')
 
+from mod.data_binning import value_types_available, methods_available
 from mod.data_binning.series_binning import SeriesBinning
 
 
 def _check_value_type_and_method(value_type, method):
 	if value_type == 'continuous':
-		assert method in ['isometric', 'quasi_chi2']
+		assert method in methods_available[value_type]
 	elif value_type == 'discrete':
-		assert method in ['label']
+		assert method in methods_available[value_type]
 	else:
 		raise ValueError('ERROR: unknown value_type {}'.format(value_type))
 	
@@ -45,14 +46,14 @@ def _check_data_and_params(data, value_types, methods, params):
 	# 检查值类型.
 	try:
 		for type in value_types:
-			assert type in ['continuous', 'discrete']
+			assert type in value_types_available
 	except:
 		raise ValueError('ERROR: value_types = {}'.format(value_types))
 	
 	# 检查分箱方法.
 	try:
 		for method in methods:
-			assert method in ['isometric', 'quasi_chi2', 'label']
+			assert method in methods_available.values()
 	except:
 		raise ValueError('ERROR: methods = {}'.format(methods))
 	

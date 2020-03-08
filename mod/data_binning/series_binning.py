@@ -23,7 +23,7 @@ import sys
 
 sys.path.append('../..')
 
-from mod.data_binning import gen_series_samples
+from mod.data_binning import value_types_available
 
 
 class SeriesBinning(object):
@@ -35,8 +35,8 @@ class SeriesBinning(object):
 		:param x: list or array like, 待分箱序列
 		:param x_type: str in ['continuous', 'discrete']
 		"""
-		if x_type not in ['continuous', 'discrete']:
-			raise ValueError('Param x_type {} not in ["continuous", "discrete"].'.format(x_type))
+		if x_type not in value_types_available:
+			raise ValueError('Param x_type {} not in value_types_availabel = {}.'.format(x_type, value_types_available))
 		
 		self.x = np.array(x).flatten()  # flatten处理
 		self.x_type = x_type
@@ -69,7 +69,7 @@ class SeriesBinning(object):
 		return self._get_stat_params()
 	
 	@time_cost
-	def isometric_binning(self, bins) -> (list, list):
+	def isometric_binning(self, bins: int) -> (list, list):
 		"""
 		等距分箱，适用于对类似高斯型数据进行分箱
 		:param bins: int > 0, 分箱个数
@@ -79,6 +79,7 @@ class SeriesBinning(object):
 		
 		Example:
 		------------------------------------------------------------
+		from mod.data_binning import gen_series_samples
 		x_1 = gen_series_samples(sample_len = 200000, value_type = 'discrete')
 		self = OneDimSeriesBinning(x_1, x_type = 'discrete')
 		freq_ns, labels = self.isometric_binning(bins = 50)

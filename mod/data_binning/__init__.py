@@ -8,10 +8,16 @@ Created on 2020/2/11 13:39
 
 @Email: dreisteine262@163.com
 
-@Describe: 
+@Describe: 初始化
 """
 
 import numpy as np
+
+value_types_available = ['continuous', 'discrete']
+methods_available = {
+	'continuous': ['isometric', 'quasi_chi2'],
+	'discrete': 'label'
+}
 
 
 def gen_series_samples(sample_len, value_type):
