@@ -111,7 +111,7 @@ class MutualInfoEntropy(object):
 		mutual_info_entropy = univar_entropy_x_ + univar_entropy_y_ - joint_entropy_
 
 		return mutual_info_entropy
-
+	
 	@time_cost
 	def cal_time_delayed_mutual_info_entropy(self, methods: list, params: list, lags: list):
 		"""含有时滞的互信息熵"""
@@ -127,7 +127,7 @@ class MutualInfoEntropy(object):
 		univar_entropy_y_ = self._univar_entropy(freq_ns_y_)
 		
 		edges_ = [edges_x_, edges_y_]
-		edges_len_ = [len(edges_x_), len(edges_y_)]
+		# edges_len_ = [len(edges_x_), len(edges_y_)]
 		
 		# 计算时滞联合分布熵.
 		td_corr_dict = {}
@@ -148,12 +148,13 @@ class MutualInfoEntropy(object):
 			data_ = np.vstack((x_td, y_td)).T
 			
 			# 在各个维度上将数据值向label进行插入, 返回插入位置.
-			insert_locs_ = np.empty([self.N, self.D], dtype = int)
+			insert_locs_ = np.zeros_like(data_, dtype = int)
 			for d in range(self.D):
 				insert_locs_[:, d] = np.searchsorted(edges_[d], data_[:, d], side = 'left')
-				
+			
 			# 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-			ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_)
+			edges_len_ = tuple(np.max(insert_locs_, axis = 0))
+			ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_, mode = 'wrap')
 			hist_ = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
 			
 			# reshape转换形状.
