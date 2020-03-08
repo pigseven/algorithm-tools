@@ -114,28 +114,7 @@ class MutualInfoEntropy(object):
 	
 	@time_cost
 	def cal_time_delayed_mutual_info_entropy(self, methods: list, params: list, lags: list):
-		"""
-		含有时滞的互信息熵
-		
-		Example:
-		------------------------------------------------------------
-		value_types = ['continuous', 'continuous']
-		methods = ['quasi_chi2', 'quasi_chi2']
-		params = [{'init_bins': 150, 'final_bins': 50}, {'init_bins': 150, 'final_bins': 50}]
-		lags = list(np.arange(-1000, 1001, 1))
-		
-		import matplotlib.pyplot as plt
-		from mod.data_binning import gen_series_samples
-		x = gen_series_samples(sample_len = 200000, value_type = value_types[0])
-		y = gen_series_samples(sample_len = 200000, value_type = value_types[1])
-	
-		mie = MutualInfoEntropy(x, y, value_types)
-		# mutual_info_entropy = mie.cal_mutual_info_entropy(methods, params)
-		td_corr_dict = mie.cal_time_delayed_mutual_info_entropy(methods, params, lags)
-		
-		plt.plot(td_corr_dict.values())
-		------------------------------------------------------------
-		"""
+		"""含有时滞的互信息熵"""
 		self._check_value_type_and_method(methods)
 		
 		# 各维度边际熵.
@@ -174,12 +153,8 @@ class MutualInfoEntropy(object):
 				insert_locs_[:, d] = np.searchsorted(edges_[d], data_[:, d], side = 'left')
 			
 			# 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-			edges_len_ = list(np.max(insert_locs_, axis = 0))
-			for d in range(self.D):
-				if self.value_types[d] == 'discrete':
-					edges_len_[d] += 1
-			
-			ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_, mode = 'wrap')
+			edges_len_ = list(np.max(insert_locs_, axis = 0) + 1)
+			ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_)
 			hist_ = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
 			
 			# reshape转换形状.

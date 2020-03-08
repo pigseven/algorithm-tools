@@ -127,12 +127,12 @@ class JointBinning(object):
 		"""
 		# 各维度序列边际分箱.
 		edges = []
-		edges_len_ = []
+		# edges_len_ = []
 		for d in range(self.D):
 			binning_ = SeriesBinning(self.data[:, d], x_type = self.value_types[d])
 			_, e_ = binning_.series_binning(method = self.methods[d], params = self.params[d])
 			edges.append(e_)
-			edges_len_.append(len(e_))
+			# edges_len_.append(len(e_))
 		
 		# 在各个维度上将数据值向label进行插入, 返回插入位置.
 		insert_locs_ = np.zeros_like(self.data, dtype = int)
@@ -140,12 +140,8 @@ class JointBinning(object):
 			insert_locs_[:, d] = np.searchsorted(edges[d], self.data[:, d], side = 'left')
 		
 		# 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-		edges_len_ = list(np.max(insert_locs_, axis = 0))
-		for d in range(self.D):
-			if self.value_types[d] == 'discrete':
-				edges_len_[d] += 1
-		
-		ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_, mode = 'wrap')
+		edges_len_ = list(np.max(insert_locs_, axis = 0) + 1)
+		ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_)
 		hist = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
 		
 		# reshape转换形状.
