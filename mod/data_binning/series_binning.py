@@ -226,6 +226,13 @@ class SeriesBinning(object):
 		:return:
 			freq_ns: list of ints, 箱子中的频数
 			labels: list of strs or ints, 各箱的标签
+			
+		Example:
+		------------------------------------------------------------
+		x_1 = gen_series_samples(sample_len = 200000, value_type = 'continuous')
+		self = SeriesBinning(x_1, x_type = 'continuous')
+		freq_ns, labels = self.series_binning(method = 'isometric', params = {'bins': 150})
+		------------------------------------------------------------
 		"""
 		if method == 'isometric':
 			freq_ns, labels = self.isometric_binning(params['bins'])
@@ -236,9 +243,3 @@ class SeriesBinning(object):
 		else:
 			raise ValueError('Invalid method {}'.format(method))
 		return freq_ns, labels
-		
-
-if __name__ == '__main__':
-	x_1 = gen_series_samples(sample_len = 200000, value_type = 'continuous')
-	self = SeriesBinning(x_1, x_type = 'continuous')
-	freq_ns, labels = self.series_binning(method = 'isometric', params = {'bins': 150})
