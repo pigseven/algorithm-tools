@@ -16,7 +16,7 @@ import numpy as np
 value_types_available = ['continuous', 'discrete']
 methods_available = {
 	'continuous': ['isometric', 'quasi_chi2'],
-	'discrete': 'label'
+	'discrete': ['label']
 }
 
 

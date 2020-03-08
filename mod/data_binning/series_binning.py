@@ -81,7 +81,7 @@ class SeriesBinning(object):
 		------------------------------------------------------------
 		from mod.data_binning import gen_series_samples
 		x_1 = gen_series_samples(sample_len = 200000, value_type = 'discrete')
-		self = OneDimSeriesBinning(x_1, x_type = 'discrete')
+		self = SeriesBinning(x_1, x_type = 'discrete')
 		freq_ns, labels = self.isometric_binning(bins = 50)
 		------------------------------------------------------------
 		"""

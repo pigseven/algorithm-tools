@@ -45,15 +45,25 @@ def _check_data_and_params(data, value_types, methods, params):
 	
 	# 检查值类型.
 	try:
-		for type in value_types:
-			assert type in value_types_available
+		for t in value_types:
+			assert t in value_types_available
 	except:
 		raise ValueError('ERROR: value_types = {}'.format(value_types))
 	
 	# 检查分箱方法.
 	try:
+		all_methods = []
+		for key in methods_available.keys():
+			m = methods_available[key]
+			if type(m) == str:
+				all_methods.append(m)
+			elif type(m) == list:
+				all_methods += m
+			else:
+				raise ValueError('ERROR: invalid type(m) == {}'.format(type(m)))
+			
 		for method in methods:
-			assert method in methods_available.values()
+			assert method in all_methods
 	except:
 		raise ValueError('ERROR: methods = {}'.format(methods))
 	
