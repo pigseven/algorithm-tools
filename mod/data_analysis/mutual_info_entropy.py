@@ -86,35 +86,56 @@ class MutualInfoEntropy(object):
 				assert method in methods_available[value_type]
 			except:
 				raise ValueError('ERROR: method {} does not match value_type {}'.format(method, value_type))
-
+	
 	@time_cost
 	def cal_mutual_info_entropy(self, methods: list, params: list):
 		"""计算互信息熵"""
 		self._check_value_type_and_method(methods)
-
+		
 		# 各维度边际熵.
 		series_binning_x_ = SeriesBinning(self.x, x_type = self.value_types[0])
 		freq_ns_x_, _ = series_binning_x_.series_binning(method = methods[0], params = params[0])
 		series_binning_y_ = SeriesBinning(self.y, x_type = self.value_types[1])
 		freq_ns_y_, _ = series_binning_y_.series_binning(method = methods[1], params = params[1])
-
+		
 		univar_entropy_x_ = self._univar_entropy(freq_ns_x_)
 		univar_entropy_y_ = self._univar_entropy(freq_ns_y_)
-
+		
 		# 联合分布熵.
 		data_ = np.vstack((self.x, self.y)).T
 		joint_binning_ = JointBinning(data_, self.value_types, methods = methods, params = params)
 		hist, _ = joint_binning_.joint_binning()
 		joint_entropy_ = self._joint_2d_entropy(hist)
-
+		
 		# 互信息熵
 		mutual_info_entropy = univar_entropy_x_ + univar_entropy_y_ - joint_entropy_
-
+		
 		return mutual_info_entropy
 	
 	@time_cost
 	def cal_time_delayed_mutual_info_entropy(self, methods: list, params: list, lags: list):
-		"""含有时滞的互信息熵"""
+		"""
+		含有时滞的互信息熵
+		
+		Example:
+		------------------------------------------------------------
+		value_types = ['continuous', 'continuous']
+		methods = ['quasi_chi2', 'quasi_chi2']
+		params = [{'init_bins': 150, 'final_bins': 50}, {'init_bins': 150, 'final_bins': 50}]
+		lags = list(np.arange(-1000, 1001, 1))
+		
+		import matplotlib.pyplot as plt
+		from mod.data_binning import gen_series_samples
+		x = gen_series_samples(sample_len = 200000, value_type = value_types[0])
+		y = gen_series_samples(sample_len = 200000, value_type = value_types[1])
+	
+		mie = MutualInfoEntropy(x, y, value_types)
+		# mutual_info_entropy = mie.cal_mutual_info_entropy(methods, params)
+		td_corr_dict = mie.cal_time_delayed_mutual_info_entropy(methods, params, lags)
+		
+		plt.plot(td_corr_dict.values())
+		------------------------------------------------------------
+		"""
 		self._check_value_type_and_method(methods)
 		
 		# 各维度边际熵.
@@ -153,7 +174,11 @@ class MutualInfoEntropy(object):
 				insert_locs_[:, d] = np.searchsorted(edges_[d], data_[:, d], side = 'left')
 			
 			# 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-			edges_len_ = tuple(np.max(insert_locs_, axis = 0))
+			edges_len_ = list(np.max(insert_locs_, axis = 0))
+			for d in range(self.D):
+				if self.value_types[d] == 'discrete':
+					edges_len_[d] += 1
+			
 			ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_, mode = 'wrap')
 			hist_ = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
 			
@@ -166,21 +191,3 @@ class MutualInfoEntropy(object):
 			td_corr_dict[lag] = mutual_info_entropy_
 		
 		return td_corr_dict
-
-
-if __name__ == '__main__':
-	value_types = ['continuous', 'continuous']
-	methods = ['quasi_chi2', 'quasi_chi2']
-	params = [{'init_bins': 150, 'final_bins': 50}, {'init_bins': 150, 'final_bins': 50}]
-	lags = list(np.arange(-1000, 1001, 1))
-	
-	import matplotlib.pyplot as plt
-	from mod.data_binning import gen_series_samples
-	x = gen_series_samples(sample_len = 200000, value_type = value_types[0])
-	y = gen_series_samples(sample_len = 200000, value_type = value_types[1])
-
-	mie = MutualInfoEntropy(x, y, value_types)
-	# mutual_info_entropy = mie.cal_mutual_info_entropy(methods, params)
-	td_corr_dict = mie.cal_time_delayed_mutual_info_entropy(methods, params, lags)
-	
-	plt.plot(td_corr_dict.values())

@@ -112,7 +112,7 @@ class JointBinning(object):
 		:return:
 			hist: np.ndarray, 高维分箱后箱子中的频数
 			edges: list of lists, 各维度上的标签
-		
+
 		Example:
 		------------------------------------------------------------
 		from mod.data_binning import gen_two_dim_samples
@@ -120,7 +120,7 @@ class JointBinning(object):
 		methods = ['label', 'quasi_chi2']
 		params = [{}, {'init_bins': 150, 'final_bins': 50}]
 		data = gen_two_dim_samples(samples_len = 2000000, value_types = value_types)
-	
+
 		joint_binning_ = JointBinning(data, value_types, methods = methods, params = params)
 		hist, edges = joint_binning_.joint_binning()
 		------------------------------------------------------------
@@ -135,15 +135,32 @@ class JointBinning(object):
 			edges_len_.append(len(e_))
 		
 		# 在各个维度上将数据值向label进行插入, 返回插入位置.
-		insert_locs_ = np.empty([self.N, self.D], dtype = int)
+		insert_locs_ = np.zeros_like(self.data, dtype = int)
 		for d in range(self.D):
 			insert_locs_[:, d] = np.searchsorted(edges[d], self.data[:, d], side = 'left')
 		
 		# 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-		ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_)
+		edges_len_ = list(np.max(insert_locs_, axis = 0))
+		for d in range(self.D):
+			if self.value_types[d] == 'discrete':
+				edges_len_[d] += 1
+		
+		ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_, mode = 'wrap')
 		hist = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
 		
 		# reshape转换形状.
 		hist = hist.reshape(edges_len_)
+		
+		# # 在各个维度上将数据值向label进行插入, 返回插入位置.
+		# insert_locs_ = np.empty([self.N, self.D], dtype = int)
+		# for d in range(self.D):
+		# 	insert_locs_[:, d] = np.searchsorted(edges[d], self.data[:, d], side = 'left')
+		#
+		# # 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
+		# ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_)
+		# hist = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
+		#
+		# # reshape转换形状.
+		# hist = hist.reshape(edges_len_)
 		
 		return hist, edges
