@@ -51,6 +51,12 @@ class MutualInfoEntropy(object):
 		self.y = np.array(y).flatten()
 		self.N = len(self.x)
 		self.value_types = value_types
+		
+		# 加入微量随机噪声.
+		if self.value_types[0] == 'continuous':
+			self.x += 1e-12 * np.random.random(self.N)
+		if self.value_types[1] == 'continuous':
+			self.y += 1e-12 * np.random.random(self.N)
 	
 	@staticmethod
 	def _probability(freq_ns):
