@@ -11,17 +11,29 @@ Created on 2019/12/24 下午12:27
 @Describe: 遗传算法
 """
 
+import logging
+
+logging.basicConfig(level = logging.INFO)
+
 from lake.decorator import time_cost
 import numpy as np
 
 
-def exp_adj_func(x, w = 10.0):
+def _exp_adj_func(x, w = 10.0):
 	"""非线性调整项，将数值映射到0-1区间."""
 	x = (np.exp(w * x) - 1.0) / (np.exp(w) - 1)
 	return x
 
 
-@time_cost
+def _sigmoid_relax(epoch_ratio: float, relax_coeff: float = 8.0):
+	"""
+	根据迭代的进行不断收紧约束
+	*	这里选择默认系数relax_coeff = 8.0, 因为sigmoid函数在x=8.0时的输出接近1.0
+	"""
+	w = 1 / (1 + np.exp(-relax_coeff * epoch_ratio)) - 0.5
+	return w
+
+
 class GeneticAlgorithm(object):
 	"""
 	遗传算法, 用于求解非线性数值优化问题.
@@ -178,8 +190,9 @@ class GeneticAlgorithm(object):
 		best_individual = self.pop[np.argmax(fitness), :].reshape(1, -1)[0, :]  # **防止有多个最优解
 		return best_fitness, best_individual
 	
-	def evolution(self, func, optim_direc, epochs, normalize = True, fit_adj_func = exp_adj_func, max_no_change = 100,
-	              verbose = True):
+	@time_cost
+	def evolution(self, func, optim_direc: str, epochs: int, normalize: bool = True, fit_adj_func = _exp_adj_func,
+				  max_no_change: int = 100, verbose: bool = True, constr_func = None, relax_coeff: float = 8.0) -> (float, list, list):
 		"""
 		执行进化
 		:param fit_adj_func: func, 函数对象, 用于对适应度进行非线性调节以计算对应概率
@@ -188,9 +201,13 @@ class GeneticAlgorithm(object):
 		:param optim_direc: str from {'minimize', 'maximize'}, 优化方向
 		:param epochs: int, 优化步数
 		:param max_no_change: int, 最长无改变次数
-		:return: final_fitness: float, 最终适应度
-		:return: final_individual: list of floats or ints, 最终筛选出的个体
-		:return: eval_process: list, 进化过程记录
+		:param verbose: bool, 是否打印学习过程
+		:param constr_func: func, 约束方程
+		:param relax_coeff: float, 约束方程对应的松弛系数
+		:return:
+			final_fitness: float, 最终适应度
+			final_individual: list of floats or ints, 最终筛选出的个体
+			eval_process: list, 进化过程记录
 			
 		Example:
 		_____________________________________________________________
@@ -217,13 +234,19 @@ class GeneticAlgorithm(object):
 		)
 		_____________________________________________________________
 		"""
-		
 		eval_process = []
 		global_best_fitness, global_best_individual = None, None
 		no_change = 0
 		for epoch in range(epochs):
-			# 计算当前最优适应度和最优个体
-			fitness, nmlzd_fitness = self._cal_fitness(func, optim_direc, normalize)
+			
+			# 构造目标函数.
+			if constr_func is None:
+				f_ = func
+			else:
+				f_ = lambda x: func(x) + _sigmoid_relax(epoch / epochs, relax_coeff) * constr_func(x)
+			
+			# 计算当前最优适应度和最优个体.
+			fitness, nmlzd_fitness = self._cal_fitness(f_, optim_direc, normalize)
 			best_fitness, best_individual = self._best_individual(fitness)
 			
 			if epoch == 0:
@@ -258,6 +281,40 @@ class GeneticAlgorithm(object):
 		final_fitness, final_individual = eval_process[-1]
 		
 		return final_fitness, final_individual, eval_process
+	
 
+if __name__ == '__main__':
+	# 目标函数
+	def obj_func(x):
+		return np.linalg.norm(x, 2)
+	
+	def constr_func(x):
+		if x[1] >= np.power(x[0], 2) + 0.9:
+			return 0.0
+		else:
+			return 10.0
+	
+	
+	# 设定参数.
+	chrome_len = 2
+	chrome_bounds = [[-1, 1], [-1, 1]]
+	chrome_types = [1, 1]
+	pop_size = 200
+	pc = 0.4
+	pm = 0.2
+	optim_direc = 'minimize'
+	epochs = 1000
+	
+	# 进行优化.
+	ga = GeneticAlgorithm(chrome_len, chrome_bounds, chrome_types, pop_size, pc, pm)
+	final_fitness, final_individual, eval_process = ga.evolution(
+		obj_func,
+		optim_direc = optim_direc,
+		epochs = epochs,
+		constr_func = constr_func
+	)
+	
+	import matplotlib.pyplot as plt
+	plt.plot([p[0] for p in eval_process])
 
 
