@@ -25,15 +25,6 @@ def _exp_adj_func(x, w = 10.0):
 	return x
 
 
-def _sigmoid_relax(epoch_ratio: float, relax_coeff: float = 8.0):
-	"""
-	根据迭代的进行不断收紧约束
-	*	这里选择默认系数relax_coeff = 8.0, 因为sigmoid函数在x=8.0时的输出接近1.0
-	"""
-	w = 1 / (1 + np.exp(-relax_coeff * epoch_ratio)) - 0.5
-	return w
-
-
 class GeneticAlgorithm(object):
 	"""
 	遗传算法, 用于求解非线性数值优化问题.
@@ -108,7 +99,7 @@ class GeneticAlgorithm(object):
 				self.pop = np.hstack((self.pop, col_rand_values))
 	
 	def _cal_fitness(self, func, optim_direc, normalize = True):
-		r"""
+		"""
 		计算适应度
 		:param obj_func: function, 目标函数
 		:param optim_direc: str from {'minimize', 'maximize'}, 优化方向
@@ -191,19 +182,17 @@ class GeneticAlgorithm(object):
 		return best_fitness, best_individual
 	
 	@time_cost
-	def evolution(self, func, optim_direc: str, epochs: int, normalize: bool = True, fit_adj_func = _exp_adj_func,
-				  max_no_change: int = 100, verbose: bool = True, constr_func = None, relax_coeff: float = 8.0) -> (float, list, list):
+	def evolution(self, obj_func, optim_direc: str, epochs: int, max_no_change: int, normalize: bool = True,
+				  fit_adj_func = _exp_adj_func, verbose: bool = True) -> (float, list, list):
 		"""
 		执行进化
 		:param fit_adj_func: func, 函数对象, 用于对适应度进行非线性调节以计算对应概率
 		:param normalize: bool, 是否对fitness值进行min-max归一化
-		:param func: function, 优化目标函数
+		:param obj_func: function, 优化目标函数
 		:param optim_direc: str from {'minimize', 'maximize'}, 优化方向
 		:param epochs: int, 优化步数
 		:param max_no_change: int, 最长无改变次数
 		:param verbose: bool, 是否打印学习过程
-		:param constr_func: func, 约束方程
-		:param relax_coeff: float, 约束方程对应的松弛系数
 		:return:
 			final_fitness: float, 最终适应度
 			final_individual: list of floats or ints, 最终筛选出的个体
@@ -239,14 +228,8 @@ class GeneticAlgorithm(object):
 		no_change = 0
 		for epoch in range(epochs):
 			
-			# 构造目标函数.
-			if constr_func is None:
-				f_ = func
-			else:
-				f_ = lambda x: func(x) + _sigmoid_relax(epoch / epochs, relax_coeff) * constr_func(x)
-			
-			# 计算当前最优适应度和最优个体.
-			fitness, nmlzd_fitness = self._cal_fitness(f_, optim_direc, normalize)
+			# 计算当前最优适应度和最优个体
+			fitness, nmlzd_fitness = self._cal_fitness(obj_func, optim_direc, normalize)
 			best_fitness, best_individual = self._best_individual(fitness)
 			
 			if epoch == 0:
@@ -284,37 +267,76 @@ class GeneticAlgorithm(object):
 	
 
 if __name__ == '__main__':
+	from mod.numerical_optimization import cal_closest_point_loc
+	
 	# 目标函数
 	def obj_func(x):
 		return np.linalg.norm(x, 2)
 	
-	def constr_func(x):
-		if x[1] >= np.power(x[0], 2) + 0.9:
+	# TODO: 这一步需要对不同约束函数, 不同自变量x通用化.
+	def g0(x, dims = None):
+		if dims is None:
+			dims = [0, 1]
+		x_ = np.array(x)[dims]
+		return x_[0] + x_[1] + 0.999
+	
+	def g1(x, dims = None):
+		if dims is None:
+			dims = [1, 2]
+		x_ = np.array(x)[dims]
+		return x_[0] * x_[1]
+	
+	def constr0(x, dims = None, w = 1e12):
+		if dims is None:
+			dims = [0, 1]
+		
+		if g0(x, dims) > 0.0:
 			return 0.0
 		else:
-			return 10.0
+			x_ = np.array(x)[dims]
+			x_close_ = cal_closest_point_loc(, x_)  # TODO: 完成这一步通用算法
+		
+		
 	
 	
+	
+	def g(x):
+		"""
+		可行域边界, 必须为开放区域, 不可为环
+		"""
+		return np.power(x, 2) + 0.999
+	
+
+	def constr_func(x, w = 1e12):
+		"""
+		必须将刚性边界转化为柔性过渡的形式
+		"""
+		if x[1] >= g(x[0]):
+			return 0.0
+		else:
+			x_close_ = cal_closest_point_loc(g, x)  # 该函数应该只与g和对应维度上的x值有关
+			x_delta_ = np.array(x_close_).flatten() - np.array(x).flatten()
+			d = np.linalg.norm(x_delta_)
+			return w * d
+		
+
 	# 设定参数.
 	chrome_len = 2
 	chrome_bounds = [[-1, 1], [-1, 1]]
 	chrome_types = [1, 1]
-	pop_size = 200
+	pop_size = 500
 	pc = 0.4
 	pm = 0.2
 	optim_direc = 'minimize'
 	epochs = 1000
-	
+
 	# 进行优化.
-	ga = GeneticAlgorithm(chrome_len, chrome_bounds, chrome_types, pop_size, pc, pm)
-	final_fitness, final_individual, eval_process = ga.evolution(
-		obj_func,
+	self = GeneticAlgorithm(chrome_len, chrome_bounds, chrome_types, pop_size, pc, pm)
+	final_fitness, final_individual, eval_process = self.evolution(
+		lambda x: obj_func(x) + constr_func(x),
 		optim_direc = optim_direc,
 		epochs = epochs,
-		constr_func = constr_func
+		max_no_change = 10
 	)
-	
-	import matplotlib.pyplot as plt
-	plt.plot([p[0] for p in eval_process])
 
 
