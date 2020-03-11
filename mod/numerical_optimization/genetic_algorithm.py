@@ -17,6 +17,11 @@ logging.basicConfig(level = logging.INFO)
 
 from lake.decorator import time_cost
 import numpy as np
+import sys
+
+sys.path.append('../..')
+
+from mod.mathematics.cal_distance_to_surface import cal_distance2surface
 
 
 def _exp_adj_func(x, w = 10.0):
@@ -189,6 +194,7 @@ class GeneticAlgorithm(object):
 		:param fit_adj_func: func, 函数对象, 用于对适应度进行非线性调节以计算对应概率
 		:param normalize: bool, 是否对fitness值进行min-max归一化
 		:param obj_func: function, 优化目标函数
+			* 如果待优化问题包含约束条件, 则写成lambda x: obj_func(x) + constr_func(x)的形式
 		:param optim_direc: str from {'minimize', 'maximize'}, 优化方向
 		:param epochs: int, 优化步数
 		:param max_no_change: int, 最长无改变次数
@@ -267,64 +273,30 @@ class GeneticAlgorithm(object):
 	
 
 if __name__ == '__main__':
-	from mod.numerical_optimization import cal_closest_point_loc
-	
-	# 目标函数
+	# %% 目标函数.
 	def obj_func(x):
 		return np.linalg.norm(x, 2)
 	
-	# TODO: 这一步需要对不同约束函数, 不同自变量x通用化.
-	def g0(x, dims = None):
-		if dims is None:
-			dims = [0, 1]
-		x_ = np.array(x)[dims]
-		return x_[0] + x_[1] + 0.999
+	# %% 约束条件.
+	# 约束函数边界方程.
+	def c0(x):
+		return x[1] - x[0] ** 2 - 0.99
 	
-	def g1(x, dims = None):
-		if dims is None:
-			dims = [1, 2]
-		x_ = np.array(x)[dims]
-		return x_[0] * x_[1]
-	
-	def constr0(x, dims = None, w = 1e12):
-		if dims is None:
-			dims = [0, 1]
-		
-		if g0(x, dims) > 0.0:
-			return 0.0
+	# 约束条件函数.
+	def constr_0(x):
+		if c0(x) >= 0:
+			return 0
 		else:
-			x_ = np.array(x)[dims]
-			x_close_ = cal_closest_point_loc(, x_)  # TODO: 完成这一步通用算法
-		
-		
+			f_dim = 2
+			x_opt, d = cal_distance2surface(c0, f_dim, x, x[:-1])
+			return 1e6 * d
 	
-	
-	
-	def g(x):
-		"""
-		可行域边界, 必须为开放区域, 不可为环
-		"""
-		return np.power(x, 2) + 0.999
-	
-
-	def constr_func(x, w = 1e12):
-		"""
-		必须将刚性边界转化为柔性过渡的形式
-		"""
-		if x[1] >= g(x[0]):
-			return 0.0
-		else:
-			x_close_ = cal_closest_point_loc(g, x)  # 该函数应该只与g和对应维度上的x值有关
-			x_delta_ = np.array(x_close_).flatten() - np.array(x).flatten()
-			d = np.linalg.norm(x_delta_)
-			return w * d
-		
-
+	# %% 遗传算法优化.
 	# 设定参数.
 	chrome_len = 2
 	chrome_bounds = [[-1, 1], [-1, 1]]
 	chrome_types = [1, 1]
-	pop_size = 500
+	pop_size = 100
 	pc = 0.4
 	pm = 0.2
 	optim_direc = 'minimize'
@@ -333,10 +305,10 @@ if __name__ == '__main__':
 	# 进行优化.
 	self = GeneticAlgorithm(chrome_len, chrome_bounds, chrome_types, pop_size, pc, pm)
 	final_fitness, final_individual, eval_process = self.evolution(
-		lambda x: obj_func(x) + constr_func(x),
+		lambda x: obj_func(x) + constr_0(x),
 		optim_direc = optim_direc,
 		epochs = epochs,
-		max_no_change = 10
+		max_no_change = 50
 	)
 
 
