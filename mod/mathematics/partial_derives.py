@@ -37,7 +37,7 @@ class PartialDerives(object):
 		self.x_syms = gen_x_syms(self.F_dim)
 		self.F_sym = gen_sym_S(self.F, self.x_syms)
 		self.G_syms_list = gen_sym_G(self.F_sym, self.x_syms)
-		self.G_sym = self.G_syms_list[0]
+		self.G_sym = self.G_syms_list[0]  # TODO: 目前默认选择第一个解, 需要改为对所有解均进行计算
 	
 	def _cal_partial_derive_syms(self) -> list:
 		"""
