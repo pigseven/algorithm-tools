@@ -21,26 +21,27 @@ import sys
 
 sys.path.append('../..')
 
-from mod.mathematics.cal_distance_to_surface import cal_distance2surface
+from mod.mathematics.point_surface_distance import cal_distance2surface
 
 
 def _exp_adj_func(x, w = 10.0):
-	"""非线性调整项，将数值映射到0-1区间."""
+	"""
+	非线性调整项，将数值映射到0-1区间
+	"""
 	x = (np.exp(w * x) - 1.0) / (np.exp(w) - 1)
 	return x
 
 
 class GeneticAlgorithm(object):
 	"""
-	遗传算法, 用于求解非线性数值优化问题.
+	遗传算法, 用于求解非线性数值优化问题
 	
 	Note:
 		1. 优化问题的输入X可以是连续值、离散类别或者二者混合, 输出y也可以是两种类型混合
 		2. GA算法本身原理是不含约束的, 如果求解问题中含有约束, 可以从以下方式解决:
-			a. 对自变量X约束, 可以在chrome_bounds中设定对应被约束变量的上下界边界值
-			b. 对输出y约束, 可以对应约束条件利用y输出值构造惩罚函数, 添加到原目标函数中,
-			   但是这样处理有可能导致在最初的迭代过程中难以找到满足约束条件的可行解, 可以在
-			   迭代初期适当松弛约束条件, 在迭代过程中不断加紧约束来处理
+			*	对自变量X约束, 可以在chrome_bounds中设定对应被约束变量的上下界边界值
+			*	对输出y约束, 可以对应约束条件利用y输出值构造惩罚函数, 惩罚函数中构造了
+				约束边界的梯度, 这样样本点会在迭代过程中沿着约束梯度方向划入可行域
 	"""
 	
 	def __init__(self, chrome_len, chrome_bounds, chrome_types, pop_size, pc = 0.4, pm = 0.2):
@@ -195,6 +196,7 @@ class GeneticAlgorithm(object):
 		:param normalize: bool, 是否对fitness值进行min-max归一化
 		:param obj_func: function, 优化目标函数
 			* 如果待优化问题包含约束条件, 则写成lambda x: obj_func(x) + constr_func(x)的形式
+			* 约束条件函数必须为 f(x) = 0的隐函数格式, 且使用python基本运算编写, 否则符号函数运算容易报错
 		:param optim_direc: str from {'minimize', 'maximize'}, 优化方向
 		:param epochs: int, 优化步数
 		:param max_no_change: int, 最长无改变次数
@@ -275,12 +277,16 @@ class GeneticAlgorithm(object):
 if __name__ == '__main__':
 	# %% 目标函数.
 	def obj_func(x):
-		return np.linalg.norm(x, 2)
+		# return np.linalg.norm(x, 2)
+		return x[1] - 0.5 * x[0]
 	
 	# %% 约束条件.
 	# 约束函数边界方程.
 	def c0(x):
-		return x[1] - x[0] ** 2 - 0.99
+		return x[1] + 0 * x[0] - 0.5
+	
+	def c1(x):
+		return x[1] - x[0] - 0.75
 	
 	# 约束条件函数.
 	def constr_0(x):
@@ -288,15 +294,24 @@ if __name__ == '__main__':
 			return 0
 		else:
 			f_dim = 2
-			x_opt, d = cal_distance2surface(c0, f_dim, x, x[:-1])
-			return 1e6 * d
+			_, d = cal_distance2surface(c0, f_dim, x, x[:-1])
+			return 1e6 + 1e12 * d
+		
+	def constr_1(x):
+		if c1(x) >= 0:
+			return 0
+		else:
+			f_dim = 2
+			_, d = cal_distance2surface(c1, f_dim, x, x[:-1])
+			return 1e6 + 1e12 * d
+		
 	
 	# %% 遗传算法优化.
 	# 设定参数.
 	chrome_len = 2
 	chrome_bounds = [[-1, 1], [-1, 1]]
 	chrome_types = [1, 1]
-	pop_size = 100
+	pop_size = 300
 	pc = 0.4
 	pm = 0.2
 	optim_direc = 'minimize'
@@ -304,11 +319,23 @@ if __name__ == '__main__':
 
 	# 进行优化.
 	self = GeneticAlgorithm(chrome_len, chrome_bounds, chrome_types, pop_size, pc, pm)
-	final_fitness, final_individual, eval_process = self.evolution(
-		lambda x: obj_func(x) + constr_0(x),
+	final_fitness, x_opt, eval_process = self.evolution(
+		lambda x: obj_func(x) + constr_0(x) + constr_1(x),
 		optim_direc = optim_direc,
 		epochs = epochs,
-		max_no_change = 50
+		max_no_change = 20
 	)
-
+	
+	# %% 优化结果效果显示.
+	import matplotlib.pyplot as plt
+	h = 0.01
+	x = np.arange(-1, 1 + h, h)
+	y_c0 = -0 * x + 0.5  # 约束1的边界
+	y_c1 = x + 0.75	# 约束2的边界
+	
+	plt.scatter(x_opt[0], x_opt[1], s = 20)
+	plt.plot(x, y_c0, 'k--', linewidth = 0.3)
+	plt.plot(x, y_c1, 'k--', linewidth = 0.3)
+	# plt.xlim([0.35, 0.65])
+	# plt.ylim([0.6, 1])
 
