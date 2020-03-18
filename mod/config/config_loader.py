@@ -30,6 +30,7 @@ class ConfigLoader(object):
 		self._set_proj_cmap()
 		self._load_config()
 		self._load_env_config()
+		self._load_test_params_config()
 		
 	def _absolute_path(self, path):
 		return os.path.join(os.path.dirname(__file__), path)
@@ -77,6 +78,13 @@ class ConfigLoader(object):
 		else:
 			with open(env_config_path_, 'r', encoding = 'utf-8') as f:
 				self._env_conf = yaml.load(f, Loader = yaml.Loader)
+				
+	def _load_test_params_config(self):
+		"""载入测试参数配置"""
+		config_dir_ = os.path.join(self.proj_dir, 'config/')
+		test_config_path_ = os.path.join(config_dir_, 'test_params.yml')
+		with open(test_config_path_, 'r', encoding = 'utf-8') as f:
+			self._test_params = yaml.load(f, Loader = yaml.Loader)
 	
 	@property
 	def proj_dir(self):
@@ -93,6 +101,10 @@ class ConfigLoader(object):
 	@property
 	def env_conf(self):
 		return self._env_conf
+	
+	@property
+	def test_params(self):
+		return self._test_params
 	
 	def set_logging(self):
 		"""

@@ -24,13 +24,6 @@ class RequestOperation(object):
 	def __init__(self, req_op = None, params = None):
 		"""
 		初始化
-		:param task_id: str, 任务id, op_type = 'pull_task_data' 或 'call_back'时使用
-		:param op_type: str, 操作类型, 必须在{'pull_task_info', 'pull_task_data', 'call_back'}中
-		:param task_type: str, 任务类型, op_type = 'pull_task_info'时使用
-		:param project_type: str, 项目类型, op_type = 'pull_task_data'时使用, 具体值需要查询对应接口文档
-		:param data: dict, 待返回数据,
-			计算成功时 data = {'progress': 'SUCCESS', 'remark': 'Success', 'result': results}
-			计算失败时 data = {'progress': 'FAILED', 'remark': '**错误信息**', 'result': {}}
 		"""
 		try:
 			assert req_op in req_ops_available

@@ -51,7 +51,7 @@ mk_file(proj_dir, '.gitignore')
 
 # 初始化config目录文件.
 config_dir = os.path.join(proj_dir, 'config/')
-for file in ['config.yml', 'default.yml']:
+for file in ['config.yml', 'default.yml', 'test_params.yml']:
 	mk_file(config_dir, file)
 
 	

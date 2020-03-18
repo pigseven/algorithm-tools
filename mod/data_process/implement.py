@@ -20,7 +20,7 @@ sys.path.append('../..')
 from mod.data_process import search_nearest_neighbors_in_list
 
 
-def data_implement(data: pd.DataFrame, fields2process: list):
+def data_implement(data: pd.DataFrame, fields2process: list = None):
 	"""
 	数据填补
 	:param data: pd.DataFrame, 待填补数据表
@@ -32,6 +32,9 @@ def data_implement(data: pd.DataFrame, fields2process: list):
 	------------------------------------------------------------
 	"""
 	data = data.copy()
+	
+	if fields2process is None:
+		fields2process = data.columns
 	
 	# 逐字段缺失值填补.
 	for field in fields2process:

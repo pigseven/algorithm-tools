@@ -86,13 +86,13 @@ class DataTemporalSerialization(object):
 		if cols2serialze is not None:
 			self.data = self.data[['time'] + cols2serialze]
 	
-	def temporal_serialize(self) -> (pd.DataFrame, int):
+	def temporal_serialize(self, categorical_cols: list = None) -> (pd.DataFrame, int):
 		"""
 		时间戳连续化.
 
 		Example:
 		------------------------------------------------------------
-		data_srlzd = dts.temporal_serialize()
+		data_srlzd, miss_n = dts.temporal_serialize()
 
 		# 可以发现处理后数据时间戳连续
 		plt.plot(list(data_srlzd['time']))
@@ -121,6 +121,11 @@ class DataTemporalSerialization(object):
 				
 				insert_row.reset_index(drop = True, inplace = True)
 				insert_row.loc[0, ('time',)] = stp
+				
+				if categorical_cols is not None:
+					for col in categorical_cols:
+						insert_row.loc[0, (col,)] = neighbors.iloc[0][col]
+				
 				self.data = self.data.append(insert_row, ignore_index = True)
 		
 		# 时间戳筛选.

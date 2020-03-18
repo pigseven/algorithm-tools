@@ -13,6 +13,7 @@ Created on 2020/1/22 下午2:58
 
 import numpy as np
 from math import factorial
+import warnings
 
 
 def normalize_cols(data, cols_bounds):
@@ -66,11 +67,13 @@ def normalize_cols(data, cols_bounds):
 			col_min, col_max = data[col].min(), data[col].max()
 			
 			if (col_min < bounds[0]) | (col_max > bounds[1]):
-				raise RuntimeError(
+				warnings.warn(
 					"var bounds error: column {}'s actual bounds are [{}, {}], while the bounds are set to [{}, {}]".format(
 						col, col_min, col_max, bounds[0], bounds[1]
 					)
 				)
+				data[data[col] < bounds[0]][col] = bounds[0]
+				data[data[col] > bounds[1]][col] = bounds[1]
 			else:
 				data[col] = data[col].apply(lambda x: (x - bounds[0]) / (bounds[1] - bounds[0]))
 	
