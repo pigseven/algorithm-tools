@@ -18,7 +18,7 @@ logging.basicConfig(level = logging.INFO)
 import numpy as np
 
 
-def replace_singulars(data, cols2check, singular_value):
+def replace_singulars2nans(data, cols2check, singular_value):
 	"""
 	替换异常值为np.nan
 	
