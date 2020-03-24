@@ -24,7 +24,6 @@ sys.path.append('../..')
 from mod.data_process import search_nearest_neighbors_in_list
 
 
-# @time_cost
 class DataTemporalSerialization(object):
 	"""
 	数据时间戳连续化处理, 使用已有记录对未知记录未知进行线性插值填充.
@@ -89,6 +88,7 @@ class DataTemporalSerialization(object):
 	def temporal_serialize(self, categorical_cols: list = None) -> (pd.DataFrame, int):
 		"""
 		时间戳连续化.
+		:param categorical_cols: list, 指定待处理字段中的类别型字段
 
 		Example:
 		------------------------------------------------------------

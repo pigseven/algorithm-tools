@@ -33,6 +33,10 @@ def replace_singulars(data, cols2check, singular_value):
 		data['is_singular_'] = data[col].apply(lambda x: 1 if x == singular_value else 0)
 		sing_locs_ = list(data[data['is_singular_'] == 1].index)
 		data.loc[sing_locs_, (col,)] = np.nan
+	
+	if 'is_singular_' in data.columns:
+		data = data.drop('is_singular_', axis = 1)
+		
 	return data
 
 
