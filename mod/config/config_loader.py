@@ -31,7 +31,7 @@ class ConfigLoader(object):
 		self._load_config()
 		self._load_env_config()
 		self._load_test_params_config()
-		
+	
 	def _absolute_path(self, path):
 		return os.path.join(os.path.dirname(__file__), path)
 	
@@ -42,14 +42,14 @@ class ConfigLoader(object):
 	def _set_proj_cmap(self):
 		"""设置项目颜色方案"""
 		self._proj_cmap = {
-			'blue': '#1f77b4',  		# 蓝色
-			'orange': '#ff7f0e',  		# 黄橙色
-			'green': '#2ca02c',  		# 绿色
-			'red': '#d62728',  			# 红色
-			'purple': '#9467bd', 	 	# 紫色
-			'cyan': '#17becf', 		 	# 青色
-			'grey': '#7f7f7f', 		 	# 灰色
-			'black': 'k'  				# 黑色
+			'blue': '#1f77b4',  # 蓝色
+			'orange': '#ff7f0e',  # 黄橙色
+			'green': '#2ca02c',  # 绿色
+			'red': '#d62728',  # 红色
+			'purple': '#9467bd',  # 紫色
+			'cyan': '#17becf',  # 青色
+			'grey': '#7f7f7f',  # 灰色
+			'black': 'k'  # 黑色
 		}
 	
 	def _load_config(self):
@@ -74,11 +74,23 @@ class ConfigLoader(object):
 				env_config_path_ = None
 		
 		if env_config_path_ is None:
-			self._env_conf = {}
+			self._local_env_conf = {}
 		else:
 			with open(env_config_path_, 'r', encoding = 'utf-8') as f:
-				self._env_conf = yaml.load(f, Loader = yaml.Loader)
-				
+				self._local_env_conf = yaml.load(f, Loader = yaml.Loader)
+		
+		# 线上环境变量注入.
+		# 如果存在可注入环境变量, 则采用注入值, 否则采用环境变量配置文件中的值.
+		self._env_conf = {}
+		if self._local_env_conf is None:
+			pass
+		else:
+			for key in self._local_env_conf.keys():
+				if key in os.environ:
+					self._env_conf.update({key: os.environ[key]})
+				else:
+					self._env_conf.update({key: self._local_env_conf[key]})
+	
 	def _load_test_params_config(self):
 		"""载入测试参数配置"""
 		config_dir_ = os.path.join(self.proj_dir, 'config/')
