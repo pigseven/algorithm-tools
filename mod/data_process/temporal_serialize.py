@@ -24,6 +24,7 @@ sys.path.append('../..')
 from mod.data_process import search_nearest_neighbors_in_list
 
 
+# @time_cost
 class DataTemporalSerialization(object):
 	"""
 	数据时间戳连续化处理, 使用已有记录对未知记录未知进行线性插值填充.
@@ -85,10 +86,11 @@ class DataTemporalSerialization(object):
 		if cols2serialze is not None:
 			self.data = self.data[['time'] + cols2serialze]
 	
-	def temporal_serialize(self, categorical_cols: list = None) -> (pd.DataFrame, int):
+	def temporal_serialize(self, categorical_cols: list = None, insert_values: bool = True) -> (pd.DataFrame, int):
 		"""
 		时间戳连续化.
-		:param categorical_cols: list, 指定待处理字段中的类别型字段
+		:param categorical_cols: list, 指定为类别型变量的字段
+		:param insert_values: bool, 是否对缺失值进行填补
 
 		Example:
 		------------------------------------------------------------
@@ -99,28 +101,35 @@ class DataTemporalSerialization(object):
 		------------------------------------------------------------
 		"""
 		exist_data = self.data.copy()  # 备份原数据, 之后的数据处理以此为准.
+		cols = exist_data.columns
 		
 		miss_n = 0
 		for stp in self.expected_stps_list:
 			if stp not in self.exist_stps_list:
 				miss_n += 1
-				
 				# 从已有数据exist_data中提取时间戳两侧最接近的数据.
 				neighbor_stps = search_nearest_neighbors_in_list(self.exist_stps_list, stp)
 				neighbors = exist_data[exist_data.time.isin(neighbor_stps)]  # 获取前后相邻时间戳的数据
 				
-				# 根据时间戳距离计算权重并进行线性加权.
-				if len(neighbor_stps) == 1:
-					insert_row = neighbors.copy()
-				elif len(neighbor_stps) == 2:
-					weights = [neighbor_stps[1] - stp, stp - neighbor_stps[0]]
-					insert_row = (weights[0] * neighbors.iloc[0, :] + weights[1] * neighbors.iloc[1, :]) / (np.sum(weights))
-					insert_row = pd.DataFrame(insert_row).T.copy()
+				if insert_values:
+					# 根据时间戳距离计算权重并进行线性加权.
+					if len(neighbor_stps) == 1:
+						insert_row = neighbors.copy()
+					elif len(neighbor_stps) == 2:
+						weights = [neighbor_stps[1] - stp, stp - neighbor_stps[0]]
+						insert_row = (weights[0] * neighbors.iloc[0, :] + weights[1] * neighbors.iloc[1, :]) / (np.sum(weights))
+						insert_row = pd.DataFrame(insert_row).T.copy()
+					else:
+						raise RuntimeError('the length of neighbors is not 1 or 2')
+					
+					insert_row.reset_index(drop = True, inplace = True)
+					insert_row.loc[0, ('time',)] = stp
 				else:
-					raise RuntimeError('the length of neighbors is not 1 or 2')
-				
-				insert_row.reset_index(drop = True, inplace = True)
-				insert_row.loc[0, ('time',)] = stp
+					insert_row = {'time': stp}
+					for col in cols:
+						if col != 'time':
+							insert_row.update({col: np.nan})
+					insert_row = pd.DataFrame.from_dict(insert_row, orient = 'index').T
 				
 				if categorical_cols is not None:
 					for col in categorical_cols:
