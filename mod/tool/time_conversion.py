@@ -33,11 +33,9 @@ def time2utc(t):
 	:param t: str like "%Y-%m-%d %H:%M:%S", 当地时间
 	:return: t_utc: str like "%Y-%m-%dT%H:%M:%S+08:00", 转换后的UTC时间
 	"""
-	
 	t_date = time.strptime(t, '%Y-%m-%d %H:%M:%S')
 	stp = int(time.mktime(t_date) - 8 * 3600)  # **注意时区
 	t_utc = time.strftime('%Y-%m-%dT%H:%M:%S+08:00', time.localtime(stp))
-	
 	return t_utc
 
 
@@ -47,11 +45,9 @@ def utc2stp(utc):
 	:param utc: str like "%Y-%m-%dT%H:%M:%S+08:00", UTC时间
 	:return: stp: int, 转换后的时间戳
 	"""
-	
 	t_date = time.strptime(utc, '%Y-%m-%dT%H:%M:%S+08:00')
 	t_start = (1970, 1, 1, 8, 0, 0, 3, 1, 0)  # 时间戳的起始记录时间，防止因时区不同导致计算出错
-	stp = int(time.mktime(t_date) - time.mktime(t_start) + 8 * 3600)
-	
+	stp = int(time.mktime(t_date) - time.mktime(t_start))
 	return stp
 
 
