@@ -31,7 +31,7 @@ class ConfigLoader(object):
 		self._load_config()
 		self._load_env_config()
 		self._load_test_params_config()
-	
+		
 	def _absolute_path(self, path):
 		return os.path.join(os.path.dirname(__file__), path)
 	
@@ -42,14 +42,14 @@ class ConfigLoader(object):
 	def _set_proj_cmap(self):
 		"""设置项目颜色方案"""
 		self._proj_cmap = {
-			'blue': '#1f77b4',  # 蓝色
-			'orange': '#ff7f0e',  # 黄橙色
-			'green': '#2ca02c',  # 绿色
-			'red': '#d62728',  # 红色
-			'purple': '#9467bd',  # 紫色
-			'cyan': '#17becf',  # 青色
-			'grey': '#7f7f7f',  # 灰色
-			'black': 'k'  # 黑色
+			'blue': '#1f77b4',  		# 蓝色
+			'orange': '#ff7f0e',  		# 黄橙色
+			'green': '#2ca02c',  		# 绿色
+			'red': '#d62728',  			# 红色
+			'purple': '#9467bd', 	 	# 紫色
+			'cyan': '#17becf', 		 	# 青色
+			'grey': '#7f7f7f', 		 	# 灰色
+			'black': 'k'  				# 黑色
 		}
 	
 	def _load_config(self):
@@ -90,7 +90,7 @@ class ConfigLoader(object):
 					self._env_conf.update({key: os.environ[key]})
 				else:
 					self._env_conf.update({key: self._local_env_conf[key]})
-	
+				
 	def _load_test_params_config(self):
 		"""载入测试参数配置"""
 		config_dir_ = os.path.join(self.proj_dir, 'config/')
