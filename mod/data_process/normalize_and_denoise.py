@@ -16,29 +16,29 @@ from math import factorial
 import warnings
 
 
-def normalize_cols(data, cols_bounds):
+def normalize_cols(data, cols_bounds: dict):
 	"""
 	数据表按照列进行归一化.
 	:param data: pd.DataFrame, 待归一化数据表
 	:param cols_bounds: dict, 各字段设定归一化的最小最大值边界
 	:return: data: pd.DataFrame, 归一化后的数据表
-	
+
 	Note:
 		1. 只有cols_bounds中选中的列才会进行归一化;
 		2. 如果实际数据中该字段值超出界限则需要调整cols_bounds中的上下界设置;
-		
+
 	Example:
 	------------------------------------------------------------
 	import pandas as pd
 	import sys
 	import os
-	
+
 	sys.path.append('../..')
-	
+
 	from lib import proj_dir
-	
+
 	data = pd.read_csv(os.path.join(proj_dir, 'data/provided/weather/data_srlzd.csv'))
-	
+
 	# %% 归一化
 	cols_bounds = {
 		'pm25': [0, 600],
@@ -56,7 +56,7 @@ def normalize_cols(data, cols_bounds):
 		'month': [0, 12],
 		'weekday': [0, 7],
 		'clock_num': [0, 24]}
-	
+
 	data_nmlzd = normalize_cols(data, cols_bounds)
 	------------------------------------------------------------
 	"""
@@ -66,14 +66,15 @@ def normalize_cols(data, cols_bounds):
 			bounds = cols_bounds[col]
 			col_min, col_max = data[col].min(), data[col].max()
 			
+			print(col, col_min, bounds)
 			if (col_min < bounds[0]) | (col_max > bounds[1]):
 				warnings.warn(
 					"var bounds error: column {}'s actual bounds are [{}, {}], while the bounds are set to [{}, {}]".format(
 						col, col_min, col_max, bounds[0], bounds[1]
 					)
 				)
-				data[data[col] < bounds[0]][col] = bounds[0]
-				data[data[col] > bounds[1]][col] = bounds[1]
+				data.loc[data[col] < bounds[0], col] = bounds[0]
+				data.loc[data[col] > bounds[1], col] = bounds[1]
 			else:
 				data[col] = data[col].apply(lambda x: (x - bounds[0]) / (bounds[1] - bounds[0]))
 	

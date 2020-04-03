@@ -45,7 +45,7 @@ def data_implement(data: pd.DataFrame, fields2process: list = None):
 			if np.isnan(values[idx]):
 				ineffec_idxs.append(idx)
 			else:
-				effec_idxs.append(idx)
+				effec_idxs.append(idx)  # 一定有序排列.
 		
 		for idx in ineffec_idxs:
 			neighbor_effec_idxs = search_nearest_neighbors_in_list(effec_idxs, idx)
