@@ -14,6 +14,11 @@ Created on 2020/2/21 14:47
 import pandas as pd
 import requests
 import json
+import sys
+
+sys.path.append('../..')
+
+from mod.handler.timeout import timeout
 
 req_ops_available = ['pull_device_value', 'pull_device_ids_list', 'pull_nearby_device_ids_list']
 
@@ -81,6 +86,7 @@ class RequestOperation(object):
 			pass
 		return url
 	
+	# @timeout(60)
 	def request(self, root_url):
 		try:
 			url = self._build_url(root_url)

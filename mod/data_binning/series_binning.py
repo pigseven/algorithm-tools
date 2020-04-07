@@ -23,7 +23,7 @@ import sys
 
 sys.path.append('../..')
 
-from mod.data_binning import value_types_available
+from mod.data_binning import VALUE_TYPES_AVAILABLE
 
 
 class SeriesBinning(object):
@@ -35,8 +35,8 @@ class SeriesBinning(object):
 		:param x: list or array like, 待分箱序列
 		:param x_type: str in ['continuous', 'discrete']
 		"""
-		if x_type not in value_types_available:
-			raise ValueError('Param x_type {} not in value_types_availabel = {}.'.format(x_type, value_types_available))
+		if x_type not in VALUE_TYPES_AVAILABLE:
+			raise ValueError('Param x_type {} not in value_types_availabel = {}.'.format(x_type, VALUE_TYPES_AVAILABLE))
 		
 		self.x = np.array(x).flatten()  # flatten处理
 		self.x_type = x_type
@@ -68,7 +68,7 @@ class SeriesBinning(object):
 	def stat_params(self):
 		return self._get_stat_params()
 	
-	@time_cost
+	# @time_cost
 	def isometric_binning(self, bins: int) -> (list, list):
 		"""
 		等距分箱，适用于对类似高斯型数据进行分箱
@@ -110,7 +110,7 @@ class SeriesBinning(object):
 		
 		return freq_ns, labels
 	
-	@time_cost
+	# @time_cost
 	def quasi_chi2_binning(self, init_bins: int, final_bins: int, merge_freq_thres: float = None) -> (list, list):
 		"""
 		拟卡方分箱
@@ -186,7 +186,7 @@ class SeriesBinning(object):
 		
 		return freq_ns, labels
 	
-	@time_cost
+	# @time_cost
 	def label_binning(self) -> (list, list):
 		"""
 		根据离散标签进行分箱
@@ -220,7 +220,7 @@ class SeriesBinning(object):
 		
 		return freq_ns, labels
 	
-	@time_cost
+	# @time_cost
 	def series_binning(self, method: str, params: dict = None):
 		"""
 		序列分箱

@@ -13,8 +13,8 @@ Created on 2020/2/11 13:39
 
 import numpy as np
 
-value_types_available = ['continuous', 'discrete']
-methods_available = {
+VALUE_TYPES_AVAILABLE = ['continuous', 'discrete']
+METHODS_AVAILABLE = {
 	'continuous': ['isometric', 'quasi_chi2'],
 	'discrete': ['label']
 }

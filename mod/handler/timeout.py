@@ -62,10 +62,7 @@ if __name__ == "__main__":
 		return k
 	
 	k = 0
-	try:
-		k = test_func()
-	except Exception as e:
-		print('Time out')
+	k = test_func(k)
 	
 	print(k)
 	

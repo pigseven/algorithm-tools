@@ -22,15 +22,15 @@ import sys
 
 sys.path.append('../..')
 
-from mod.data_binning import value_types_available, methods_available
+from mod.data_binning import VALUE_TYPES_AVAILABLE, METHODS_AVAILABLE
 from mod.data_binning.series_binning import SeriesBinning
 
 
 def _check_value_type_and_method(value_type, method):
 	if value_type == 'continuous':
-		assert method in methods_available[value_type]
+		assert method in METHODS_AVAILABLE[value_type]
 	elif value_type == 'discrete':
-		assert method in methods_available[value_type]
+		assert method in METHODS_AVAILABLE[value_type]
 	else:
 		raise ValueError('ERROR: unknown value_type {}'.format(value_type))
 	
@@ -46,15 +46,15 @@ def _check_data_and_params(data, value_types, methods, params):
 	# 检查值类型.
 	try:
 		for t in value_types:
-			assert t in value_types_available
+			assert t in VALUE_TYPES_AVAILABLE
 	except:
 		raise ValueError('ERROR: value_types = {}'.format(value_types))
 	
 	# 检查分箱方法.
 	try:
 		all_methods = []
-		for key in methods_available.keys():
-			m = methods_available[key]
+		for key in METHODS_AVAILABLE.keys():
+			m = METHODS_AVAILABLE[key]
 			if type(m) == str:
 				all_methods.append(m)
 			elif type(m) == list:
@@ -89,26 +89,22 @@ def _check_data_and_params(data, value_types, methods, params):
 class JointBinning(object):
 	"""联合分箱"""
 	
-	def __init__(self, data: np.array, value_types: list, methods: list, params: list):
+	def __init__(self, data: np.array, value_types: list):
 		"""
 		初始化
 		:param data: np.array, shape = (N, D), N为数据样本数, D为样本维数
 		:param value_types: list of strs, 各维数上的数据类型
-		:param methods: list of strs, 各维数采用分箱方式
-		:param params: list of dicts, 各维数对应分箱计算参数
 		"""
-		_check_data_and_params(data, value_types, methods, params)
-		
 		self.data = data
 		self.N, self.D = self.data.shape
 		self.value_types = value_types
-		self.methods = methods
-		self.params = params
 	
-	@time_cost
-	def joint_binning(self) -> (np.ndarray, list):
+	# @time_cost
+	def joint_binning(self, methods: list, params: list) -> (np.ndarray, list):
 		"""
 		联合分箱
+		:param methods: list of strs, 各维数采用分箱方式
+		:param params: list of dicts, 各维数对应分箱计算参数
 		:return:
 			hist: np.ndarray, 高维分箱后箱子中的频数
 			edges: list of lists, 各维度上的标签
@@ -125,14 +121,14 @@ class JointBinning(object):
 		hist, edges = joint_binning_.joint_binning()
 		------------------------------------------------------------
 		"""
+		_check_data_and_params(self.data, self.value_types, methods, params)
+		
 		# 各维度序列边际分箱.
 		edges = []
-		# edges_len_ = []
 		for d in range(self.D):
 			binning_ = SeriesBinning(self.data[:, d], x_type = self.value_types[d])
-			_, e_ = binning_.series_binning(method = self.methods[d], params = self.params[d])
+			_, e_ = binning_.series_binning(method = methods[d], params = params[d])
 			edges.append(e_)
-			# edges_len_.append(len(e_))
 		
 		# 在各个维度上将数据值向label进行插入, 返回插入位置.
 		insert_locs_ = np.zeros_like(self.data, dtype = int)
@@ -146,17 +142,5 @@ class JointBinning(object):
 		
 		# reshape转换形状.
 		hist = hist.reshape(edges_len_)
-		
-		# # 在各个维度上将数据值向label进行插入, 返回插入位置.
-		# insert_locs_ = np.empty([self.N, self.D], dtype = int)
-		# for d in range(self.D):
-		# 	insert_locs_[:, d] = np.searchsorted(edges[d], self.data[:, d], side = 'left')
-		#
-		# # 将高维坐标映射到一维坐标上, 然后统计各一维坐标上的频率.
-		# ravel_locs_ = np.ravel_multi_index(insert_locs_.T, dims = edges_len_)
-		# hist = np.bincount(ravel_locs_, minlength = np.array(edges_len_).prod())
-		#
-		# # reshape转换形状.
-		# hist = hist.reshape(edges_len_)
 		
 		return hist, edges
