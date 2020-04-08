@@ -38,19 +38,22 @@ def data_implement(data: pd.DataFrame, fields2process: list = None):
 	
 	# 逐字段缺失值填补.
 	for field in fields2process:
+		print('Implementing field "{}"'.format(field))
 		values = list(data.loc[:, field])
 		
-		effec_idxs, ineffec_idxs = [], []
-		for idx in range(len(values)):
-			if np.isnan(values[idx]):
-				ineffec_idxs.append(idx)
-			else:
-				effec_idxs.append(idx)  # 一定有序排列.
+		total_idxs = list(range(len(values)))
+		ineffec_idxs = list(np.argwhere(np.isnan(values)).flatten())
+		effec_idxs = list(set(total_idxs).difference(set(ineffec_idxs)))
+		
+		ineffec_idxs.sort()
+		effec_idxs.sort()
 		
 		for idx in ineffec_idxs:
 			neighbor_effec_idxs = search_nearest_neighbors_in_list(effec_idxs, idx)
 			value2implement = np.mean(data.loc[neighbor_effec_idxs, field])
 			data.loc[idx, field] = value2implement
+	print('\n')
+	
 	return data
 	
 	

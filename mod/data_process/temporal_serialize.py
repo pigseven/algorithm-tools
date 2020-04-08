@@ -111,9 +111,7 @@ class DataTemporalSerialization(object):
 		for i in range(miss_n):
 			# 显示进度.
 			if (i + 1) % 100 == 0:
-				print('Proceeding: {}'.format(str(int(i / miss_n * 100)) + '%') + "\r", end = "")
-			if i == miss_n - 1:
-				print('\n')
+				print('DTS Proceeding: {}'.format(str(int(i / miss_n * 100)) + '%') + "\r", end = "")
 			
 			stp = stps2fill[i]
 			
@@ -152,9 +150,11 @@ class DataTemporalSerialization(object):
 		self.data = self.data[self.data.time.isin(self.expected_stps_list)]
 		
 		# 时间戳去重.
+		print('DTS drop_duplicates "time"')
 		self.data = self.data.drop_duplicates(['time'])
 		
 		# 按照时间戳由小到大顺序排序.
+		print('DTS sort "time"\n')
 		self.data = self.data.sort_values(by = ['time'], ascending = True)
 		
 		# 重设index.
