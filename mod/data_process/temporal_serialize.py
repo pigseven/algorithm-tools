@@ -104,10 +104,19 @@ class DataTemporalSerialization(object):
 		exist_data = self.data.copy()  # 备份原数据, 之后的数据处理以此为准.
 		cols = exist_data.columns
 		
-		stps2fill = set(self.expected_stps_list).difference(self.exist_stps_list)
+		stps2fill = list(set(self.expected_stps_list).difference(self.exist_stps_list))
 		miss_n = len(stps2fill)
+		print('miss_n = {}'.format(miss_n))
 		
-		for stp in stps2fill:
+		for i in range(miss_n):
+			# 显示进度.
+			if (i + 1) % 100 == 0:
+				print('Proceeding: {}'.format(str(int(i / miss_n * 100)) + '%') + "\r", end = "")
+			if i == miss_n - 1:
+				print('\n')
+			
+			stp = stps2fill[i]
+			
 			# 从已有数据exist_data中提取时间戳两侧最接近的数据.
 			neighbor_stps = search_nearest_neighbors_in_list(self.exist_stps_list, stp)
 			neighbors = exist_data[exist_data.time.isin(neighbor_stps)]  # 获取前后相邻时间戳的数据
