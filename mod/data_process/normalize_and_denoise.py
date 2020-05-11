@@ -11,34 +11,35 @@ Created on 2020/1/22 下午2:58
 @Describe: 数据归一化和去噪
 """
 
-import numpy as np
 from math import factorial
+import pandas as pd
+import numpy as np
 import warnings
 
 
-def normalize_cols(data, cols_bounds: dict):
+def normalize_cols(data, cols_bounds: dict) -> pd.DataFrame:
 	"""
 	数据表按照列进行归一化.
 	:param data: pd.DataFrame, 待归一化数据表
 	:param cols_bounds: dict, 各字段设定归一化的最小最大值边界
 	:return: data: pd.DataFrame, 归一化后的数据表
-
+	
 	Note:
 		1. 只有cols_bounds中选中的列才会进行归一化;
 		2. 如果实际数据中该字段值超出界限则需要调整cols_bounds中的上下界设置;
-
+		
 	Example:
 	------------------------------------------------------------
 	import pandas as pd
 	import sys
 	import os
-
+	
 	sys.path.append('../..')
-
+	
 	from lib import proj_dir
-
+	
 	data = pd.read_csv(os.path.join(proj_dir, 'data/provided/weather/data_srlzd.csv'))
-
+	
 	# %% 归一化
 	cols_bounds = {
 		'pm25': [0, 600],
@@ -56,7 +57,7 @@ def normalize_cols(data, cols_bounds: dict):
 		'month': [0, 12],
 		'weekday': [0, 7],
 		'clock_num': [0, 24]}
-
+	
 	data_nmlzd = normalize_cols(data, cols_bounds)
 	------------------------------------------------------------
 	"""
@@ -75,8 +76,8 @@ def normalize_cols(data, cols_bounds: dict):
 				)
 				data.loc[data[col] < bounds[0], col] = bounds[0]
 				data.loc[data[col] > bounds[1], col] = bounds[1]
-			else:
-				data[col] = data[col].apply(lambda x: (x - bounds[0]) / (bounds[1] - bounds[0]))
+			
+			data[col] = data[col].apply(lambda x: (x - bounds[0]) / (bounds[1] - bounds[0]))
 	
 	return data
 
@@ -112,14 +113,14 @@ def savitzky_golay(y, window_size, order, deriv = 0, rate = 1):
 	return np.convolve(m[::-1], y, mode = 'valid')
 
 
-def denoise_cols(data, cols2denoise, window_size, order):
+def denoise_cols(data, cols2denoise, window_size: int = None, order: int = None, params: dict = None) -> pd.DataFrame:
 	"""
 	对数据表选中列进行去噪.
 	:param data: pd.DataFrame, 待去噪数据表.
 	:param cols2denoise: list of strs, 选中用于去噪的字段
 	:param window_size: int > 3, Savitzky-Golay滤波双侧窗口长度
 	:param order: int > 1, Savitzky-Golay滤波阶数
-	:return: data: pd.DataFrame, 经过去噪处理后的数据表
+	:param params: dict, 各字段滤波参数
 	
 	Example:
 	------------------------------------------------------------
@@ -131,15 +132,19 @@ def denoise_cols(data, cols2denoise, window_size, order):
 	data_denoised = denoise_cols(data_nmlzd, cols2denoise, window_size, order)
 	------------------------------------------------------------
 	"""
-	
-	if window_size < 2 * order + 1:
-		raise ValueError('window_size应不小于2 * order + 1.')
-	
 	data = data.copy()
+	
+	if not params:
+		if window_size < 2 * order + 1:
+			raise ValueError('window_size应不小于2 * order + 1.')
+	
 	for col in cols2denoise:
 		if col in data.columns:
 			y = np.array(data[col])
-			data[col] = savitzky_golay(y, window_size = window_size, order = order)
+			if params:
+				data[col] = savitzky_golay(y, **params[col])
+			else:
+				data[col] = savitzky_golay(y, window_size = window_size, order = order)
 	return data
 	
 	
